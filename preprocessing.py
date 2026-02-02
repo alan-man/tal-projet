@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from nltk.stem import WordNetLemmatizer as wnl  
+from nltk.stem import WordNetLemmatizer as wnl, SnowballStemmer as ss # for different language
 from sklearn.feature_extraction.text import CountVectorizer,TfidfVectorizer
 import string
 import unicodedata
@@ -8,6 +8,7 @@ from nltk.tag import pos_tag
 from nltk.tokenize import word_tokenize
 import re
 import codecs
+from typing import Literal
 
 # different things to test
 # TODO
@@ -59,19 +60,53 @@ def preprocessing(text: str,
                   lower_case = True,
                   rm_punctuation = True,
                   rm_number = True,
+                  lemming = True,
                   stemming = True,
                   pos_tagging = True,
-                  maj_name = True, # ?
+                  all_capital = True, # check if keep
+                  maj_name = True, # garder les noms en majuscules ?
                   rm_accent = True, # non normalized char check
-                  punct_lst = string.punctuation) -> str:
+                  language : Literal["english", "french"] = "english",
+                  punct = string.punctuation) -> str: # punctuation can contain -, that would be kept
+    
     """ Réalise le pré-processing du texte."""
     
     # conservation d'une partie du texte? 
+    # check if langage frech or english
 
-    # check order!!
+    if rm_accent: text = unicodedata.normalize('NFD', text).encode('ascii', 'ignore').decode("utf-8") 
+
+    if rm_punctuation: text = text.translate(str.maketrans(punct, ' ' * len(punct)))
+
     if lower_case:
-        text = text.lower()
-    if rm_number:
+        if all_capital:
+            ' '.join(word if word.isupper() else word.lower() for word in text.split())
+        else:
+            text = text.lower()
+
+    if rm_number: text = re.sub('[0-9]+', '', text)
+
+    # working on tokens
+    tokens = word_tokenize(text)
+
+    if lemming:
+        # for all word
+        lemmer = wnl()
+        for i, token in enumerate(tokens):
+            tokens[i] = lemmer.lemmatize(token)
+
+    if stemming:
+        stemmer = ss(language)
+        for i, token in enumerate(tokens):
+            tokens[i] = stemmer.stem(token)
+
+    if pos_tagging:
         pass
 
-    return 
+    # tags used for pos lemmatizing?
+
+    # keeps names as they are with pos tagging
+
+    text = " ".join(text)
+
+    return text

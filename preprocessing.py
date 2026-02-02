@@ -1,6 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from nltk.stem import WordNetLemmatizer as wnl  
+from sklearn.feature_extraction.text import CountVectorizer,TfidfVectorizer
+import string
+import unicodedata
 from nltk.tag import pos_tag
 from nltk.tokenize import word_tokenize
 import re
@@ -23,6 +26,8 @@ import codecs
 
 # Vérifier systématiquement sur un exemple ou deux le bon fonctionnement des méthodes sur deux documents (au moins un de chaque classe).
 
+
+# -------------- dataset
 
 def load_pres(fname):
     """
@@ -47,19 +52,26 @@ def load_pres(fname):
 
     return alltxts,alllabs
 
-def preprocessing(texts:list, 
+
+# -------------- preprocessing
+
+def preprocessing(text: str, 
                   lower_case = True,
                   rm_punctuation = True,
                   rm_number = True,
                   stemming = True,
                   pos_tagging = True,
                   maj_name = True, # ?
-                  ) -> list:
+                  rm_accent = True, # non normalized char check
+                  punct_lst = string.punctuation) -> str:
     """ Réalise le pré-processing du texte."""
     
-    # conservation d'une partie du texte?
+    # conservation d'une partie du texte? 
 
-
-    
+    # check order!!
+    if lower_case:
+        text = text.lower()
+    if rm_number:
+        pass
 
     return 

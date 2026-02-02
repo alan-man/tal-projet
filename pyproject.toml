@@ -1,0 +1,13 @@
+[project]
+name = "tal-projet"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "matplotlib>=3.10.8",
+    "nltk>=3.9.2",
+    "numpy>=2.4.2",
+    "scikit-learn>=1.8.0",
+    "unicode>=2.9",
+]

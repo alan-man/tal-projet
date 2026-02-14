@@ -112,7 +112,6 @@ def lower_case(text : str, all_cap : bool = False):
 def bow_stop_words(text: str, lang : Literal["english", "french"] = "english"): # mix of both?
 
     lst_stop_w = stopwords.words('english') if lang == "english" else stopwords.words('french')
-
     vectorizer = CountVectorizer(stop_words=lst_stop_w)
 
     X = vectorizer.fit_transform(text)

@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from collections import Counter
 
-from nltk.stem import WordNetLemmatizer as wnl, SnowballStemmer as ss # for different language
+from nltk.stem import WordNetLemmatizer as wnl, SnowballStemmer  # for different language
 from nltk.corpus import stopwords
 from nltk.tag import pos_tag
 from nltk.tokenize import word_tokenize
@@ -32,6 +32,14 @@ from typing import Literal
 
 # Vérifier systématiquement sur un exemple ou deux le bon fonctionnement des méthodes sur deux documents (au moins un de chaque classe).
 
+# ------------- GLOBAL LOADING
+
+NLP_EN = spacy.load("en_core_web_sm", disable=["parser", "ner"])
+NLP_FR = spacy.load("fr_core_news_sm", disable=["parser", "ner"])
+
+
+STEM_EN = SnowballStemmer("english")
+STEM_FR = SnowballStemmer("french")
 
 # -------------- dataset
 
@@ -77,25 +85,40 @@ def lemma_stem(text:str,
                norm : Literal["lemma", "stem"] = "lemma", 
                lang : Literal["english", "french"] = "english",
                cap_name: bool = True, # keep names in Capital
-               lem = None, stem = None): #  to avoid redefining each time
+               pos_tag: bool = False):
     
     """ Lemmatize/Stemm text. Input and output are text. No stemming or lemma if all caps """
-    if not lem:
-        lem = spacy.load("en_core_web_sm") if lang == "english" else spacy.load("fr_core_news_sm") # pasisng in argument to avoid redefining
+    
+    lem = NLP_EN if lang == "english" else NLP_FR 
+    stem = STEM_EN if lang == "english" else STEM_FR
     
     doc_lemmed = lem(text)
 
-    if norm == 'lemma':
-        if cap_name:
-            tokens = [token.lemma_ if token.pos_ != 'PROPN' and not token.text.isupper() else token.text for token in doc_lemmed]
+    tokens = []
+    pos_tags = []
+
+    for token in doc_lemmed:
+
+        # Keep proper nouns or ALL CAPS
+        if cap_name and (token.pos_ == "PROPN" or token.text.isupper()):
+            word = token.text
+
         else:
-            tokens = [token.lemma_ for token in doc_lemmed]
-    else:
-        if not stem:
-            stem = ss(lang) 
-        tokens = [stem.stem(token.text) if token.pos_ != 'PROPN' and not token.text.isupper() else token.text for i, token in enumerate(doc_lemmed)]
-    
-    return " ".join(tokens)
+            if norm == "lemma":
+                word = token.lemma_
+            else:  # stem
+                word = stem.stem(token.text)
+
+        tokens.append(word)
+
+        if pos_tag:
+            pos_tags.append((word, token.pos_))
+
+    processed_txt = " ".join(tokens)
+
+    if pos_tag:
+        return processed_txt, pos_tags
+    return processed_txt
 
 def lower_case(text : str, all_cap : bool = False):
     """ Lower case text and if keep all caps words. Don't recognize names to keep them in cap."""
@@ -109,45 +132,38 @@ def lower_case(text : str, all_cap : bool = False):
 
     return text.lower()
 
-def bow_stop_words(text: str, lang : Literal["english", "french"] = "english"): # mix of both?
-
-    lst_stop_w = stopwords.words('english') if lang == "english" else stopwords.words('french')
-    vectorizer = CountVectorizer(stop_words=lst_stop_w)
-
-    X = vectorizer.fit_transform(text)
-    return X, vectorizer
-
+# pos cannot be returned in count vectorizer
 def preprocessing(text: str, 
                   low_case = True,
                   rm_punctuation = True,
-                  rm_number = True,
-                  word_norm : Literal["lemma", "stem"] = "lemma",
+                  rm_number = False,
+                  word_norm : None|Literal["lemma", "stem"] = None, # stem faster
                   pos_tagging = False, # to check
                   all_capital = True, # keep all capital words as they are
-                  cap_name = True, # garder les noms en majuscules ?
+                  cap_name = True, # garder les noms en majuscules 
                   rm_accent = True, 
                   lang : Literal["english", "french"] = "english",
                   punct = string.punctuation + '\n\r\t', # punctuation can contain -, that would be kept
-                  urls : bool = False) -> str: 
+                  urls : bool = True) -> str: 
     
     """ Réalise le pré-processing du texte. Renvoie les tokens"""
-    
     # conservation d'une partie du texte? 
 
-    if word_norm: text = lemma_stem(text, word_norm, lang, cap_name)
-
-    if pos_tagging: # used in keyword filtering/extraction 
-        tokens = word_tokenize(text)
-        pos_tags_words = pos_tag(tokens) # tuple (word, tag) -> check can filter on what
-
-    if rm_accent: text = unicodedata.normalize('NFD', text).encode('ascii', 'ignore').decode("utf-8") 
-    if rm_punctuation: text = text.translate(str.maketrans(punct, ' ' * len(punct)))
-    if low_case: text = lower_case(text, all_capital)
-    if rm_number: text = re.sub('[0-9]+', '', text)
     if not urls : text = re.sub(r'https?://\S+|www\.\S+', 'URL', text) 
 
+    if word_norm:
+        if pos_tagging:
+            text, pos_tags = lemma_stem(text, word_norm, lang, cap_name, pos_tagging)
+        else:
+            text = lemma_stem(text, word_norm, lang, cap_name, pos_tagging)
+
+    if low_case: text = lower_case(text, all_capital)
+    if rm_number: text = re.sub('[0-9]+', '', text)
+    if rm_accent: text = unicodedata.normalize('NFD', text).encode('ascii', 'ignore').decode("utf-8") 
+    if rm_punctuation: text = text.translate(str.maketrans(punct, ' ' * len(punct)))
+
     if pos_tagging:
-        return text, pos_tags_words
+        return text, pos_tags
     return text
 
 if __name__ == "__main__":

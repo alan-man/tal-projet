@@ -144,7 +144,7 @@ def preprocessing(text: str,
                   rm_accent = True, 
                   lang : Literal["english", "french"] = "english",
                   punct = string.punctuation + '\n\r\t', # punctuation can contain -, that would be kept
-                  urls : bool = True) -> str: 
+                  urls : bool = True) -> str: # keep urls or not
     
     """ Réalise le pré-processing du texte. Renvoie les tokens"""
     # conservation d'une partie du texte? 

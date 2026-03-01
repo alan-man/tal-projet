@@ -16,4 +16,5 @@ dependencies = [
     "fr-core-news-sm @ https://github.com/explosion/spacy-models/releases/download/fr_core_news_sm-3.8.0/fr_core_news_sm-3.8.0-py3-none-any.whl",
     "wordcloud>=1.9.6",
     "pyldavis>=3.4.1",
+    "seaborn>=0.13.2",
 ]

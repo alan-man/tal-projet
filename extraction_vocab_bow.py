@@ -8,9 +8,9 @@ import matplotlib.pyplot as plt
 from preprocessing import preprocessing
 
 
-def exploration(list_txts,preprocess):
+def basic_bow_exploration(list_txts):
     #  basic bow
-    vectorizer1 = CountVectorizer(preprocessor=preprocess)
+    vectorizer1 = CountVectorizer()
     X1 = vectorizer1.fit_transform(list_txts)
     vocab1 = vectorizer1.get_feature_names_out()
 
@@ -19,14 +19,14 @@ def exploration(list_txts,preprocess):
     print(vocab1,"\n")
 
     # 100 most frequent
-    vectorizer2 = CountVectorizer(preprocessor=preprocess,max_features=100)
+    vectorizer2 = CountVectorizer(max_features=100)
     X2 = vectorizer2.fit_transform(list_txts)
     vocab2 = vectorizer2.get_feature_names_out()
     print(f"vocab avec les 100 mots plus frequents :")
     print(vocab2,"\n")
 
     # tf idf
-    vect_tfidf = TfidfVectorizer(preprocessor=preprocess,use_idf= True, smooth_idf=True, sublinear_tf=False)
+    vect_tfidf = TfidfVectorizer(use_idf= True, smooth_idf=True, sublinear_tf=False)
     X3 = vect_tfidf.fit_transform(list_txts)
     vocab3 = vect_tfidf.get_feature_names_out()
     idf = vect_tfidf.idf_
@@ -61,7 +61,7 @@ def exploration(list_txts,preprocess):
     plt.show()
 
     # bigrams
-    vectorizer_bi = CountVectorizer(preprocessor=preprocess,ngram_range=(2, 2), max_features=100)
+    vectorizer_bi = CountVectorizer(ngram_range=(2, 2), max_features=100)
     X_bi = vectorizer_bi.fit_transform(list_txts)
 
     vocab_bi = np.array(vectorizer_bi.get_feature_names_out())
@@ -69,7 +69,7 @@ def exploration(list_txts,preprocess):
     print(vocab_bi)
 
     # trigrams
-    vectorizer_tri = CountVectorizer(preprocessor=preprocess,ngram_range=(3, 3), max_features=100)
+    vectorizer_tri = CountVectorizer(ngram_range=(3, 3), max_features=100)
     X_tri= vectorizer_tri.fit_transform(list_txts)
 
     vocab_tri = np.array(vectorizer_tri.get_feature_names_out())

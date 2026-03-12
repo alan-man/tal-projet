@@ -92,7 +92,7 @@ class Preprocessing:
                 word_norm : None|Literal["lemma", "stem"] = None, # stem faster
                 pos_tagging = False, # to check
                 all_capital = True, # keep all capital words as they are
-                cap_name = True, # garder les noms en majuscules 
+                cap_name = True, # garder les noms en majuscules, for pos tag
                 rm_accent = True, 
                 lang : Literal["english", "french"] = "english",
                 punct = string.punctuation + '\n\r\t', # punctuation can contain -, that would be kept
@@ -171,6 +171,7 @@ class Preprocessing:
             # Keep proper nouns or ALL CAPS
             if self.cap_name and (token.pos_ == "PROPN" or token.text.isupper()):
                 word = token.text
+
             else:
                 if self.word_norm == "lemma":
                     word = token.lemma_
@@ -190,6 +191,29 @@ class Preprocessing:
 
     def process(self, text : str):
         # preprocess a text
+        """Réalise le pré-processing du texte. Renvoie les tokens."""
+        # conservation d'une partie du texte? 
+
+        if not self.urls:
+            # use compiled pattern instead of boolean flag
+            text = re.sub(self._url_pattern, 'URL', text)
+
+        if self.word_norm:
+            if self.pos_tagging:
+                text, pos_tags = self.lemma_stem(text)
+            else:
+                text = self.lemma_stem(text)
+
+        if self.low_case: text = self.lower_case(text)
+        if self.rm_number: text = re.sub('[0-9]+', '', text)
+        if self.rm_accent: text = unicodedata.normalize('NFD', text).encode('ascii', 'ignore').decode("utf-8") 
+        if self.rm_punctuation: text = text.translate(str.maketrans(self.punct, ' ' * len(self.punct)))
+
+        if self.pos_tagging:
+            return text, pos_tags
+        return text
+
+    def __call__(self, text): # for count vectorizer
         """Réalise le pré-processing du texte. Renvoie les tokens."""
         # conservation d'une partie du texte? 
 

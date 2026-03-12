@@ -60,5 +60,15 @@ bload = False
 fname = "word2vec-google-news-300"
 sdir = "" # Change
 
-wv_pre_trained = api.load(fname)
-wv_pre_trained.save(sdir+fname+".dat")
+prout = api.load(fname)
+prout.save(sdir+fname+".dat")
+
+#TODO
+# import llm embeddings to embed
+# work on speaker 
+
+
+# ---- embedding
+
+embed_model = HuggingFaceEmbeddings(model_name="BAAI/bge-base-en-v1.5")
+from langchain_huggingface import HuggingFaceEmbeddings

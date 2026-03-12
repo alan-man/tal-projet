@@ -52,3 +52,13 @@ Xtest = [vectorize(text, w2v) for text in X_test]
 scaler = preprocessing.StandardScaler().fit(X)
 X_scaled = scaler.transform(X)
 Xtest_scaled = scaler.transform(Xtest)
+
+import gensim.downloader as api
+from gensim.models import KeyedVectors
+
+bload = False
+fname = "word2vec-google-news-300"
+sdir = "" # Change
+
+wv_pre_trained = api.load(fname)
+wv_pre_trained.save(sdir+fname+".dat")

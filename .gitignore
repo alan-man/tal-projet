@@ -2,3 +2,5 @@
 Dataset/
 images/
 __pycache__/
+*.dat
+*.npy

@@ -1467,7 +1467,6 @@ requires-dist = [
     { name = "scikit-learn", specifier = ">=1.8.0" },
     { name = "seaborn", specifier = ">=0.13.2" },
     { name = "spacy", specifier = ">=3.8.0" },
-    { name = "spacy", specifier = ">=3.8.11" },
     { name = "unicode", specifier = ">=2.9" },
     { name = "wordcloud", specifier = ">=1.9.6" },
 ]

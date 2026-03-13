@@ -139,6 +139,13 @@ class Preprocessing:
         # e.g. a regex for url removal
         self._url_pattern = re.compile(r'https?://\S+|www\.\S+')
 
+    def __str__(self):
+        # Filter only the attributes you want, or just print them all
+        output = "Configuration Flags:\n"
+        for key, value in vars(self).items():
+            output += f"  {key}: {value}\n"
+        return output
+
     # functions to process
     def lower_case(self, text : str):
         """ Lower case text and if keep all caps words. Don't recognize names to keep them in cap."""
@@ -214,28 +221,7 @@ class Preprocessing:
         return text
 
     def __call__(self, text): # for count vectorizer
-        """Réalise le pré-processing du texte. Renvoie les tokens."""
-        # conservation d'une partie du texte? 
-
-        if not self.urls:
-            # use compiled pattern instead of boolean flag
-            text = re.sub(self._url_pattern, 'URL', text)
-
-        if self.word_norm:
-            if self.pos_tagging:
-                text, pos_tags = self.lemma_stem(text)
-            else:
-                text = self.lemma_stem(text)
-
-        if self.low_case: text = self.lower_case(text)
-        if self.rm_number: text = re.sub('[0-9]+', '', text)
-        if self.rm_accent: text = unicodedata.normalize('NFD', text).encode('ascii', 'ignore').decode("utf-8") 
-        if self.rm_punctuation: text = text.translate(str.maketrans(self.punct, ' ' * len(self.punct)))
-
-        if self.pos_tagging:
-            return text, pos_tags
-        return text
-
+        return self.process(text)
 
 # pos cannot be returned in count vectorizer
 

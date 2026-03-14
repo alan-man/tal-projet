@@ -3,12 +3,35 @@ import matplotlib.pyplot as plt
 import codecs
 import re
 import unicodedata
-from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+import string
 import matplotlib.pyplot as plt
-from preprocessing import preprocessing
+
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+from preprocessing_class import Preprocessing
 
 
-def basic_bow_exploration(list_txts):
+def basic_bow_exploration(list_txts,lang="french"):
+
+    punc = set(string.punctuation + '\n\r\t')
+    if lang == "french":
+        punc.remove("'") # keep the ' for french words
+    custom_punctuation = "".join(punc)
+
+    prep = Preprocessing(low_case = True,
+        rm_punctuation = True,
+        rm_number = False,
+        word_norm = None, # stem faster
+        pos_tagging = False, # to check
+        all_capital = True, # keep all capital words as they are
+        cap_name = True, # garder les noms en majuscules, for pos tag
+        rm_accent = False, 
+        lang = lang,
+        punct = custom_punctuation, # punctuation can contain -, that would be kept
+        urls = False 
+    )
+
+    cleaned_txts = [prep.process(text) for text in list_txts]
+
     #  basic bow
     vectorizer1 = CountVectorizer()
     X1 = vectorizer1.fit_transform(list_txts)

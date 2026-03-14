@@ -65,6 +65,24 @@ def load_pres(fname):
 
     return alltxts,alllabs
 
+def load_pres_test(fname):
+    """
+    Charge les données test, sans labels
+    """
+    # >0.5 = Mitterand, <0.5 = Chirac
+    
+    alltxts = []
+    s=codecs.open(fname, 'r','utf-8') # pour régler le codage
+    while True:
+        txt = s.readline()
+        if(len(txt))<5:
+            break
+        
+        txt = re.sub(r"<[0-9]*:[0-9]*:.>(.*)","\\1",txt)
+        alltxts.append(txt)
+
+    return alltxts
+
 def load_movies(path2data): # 1 classe par répertoire
     alltxts = [] # init vide
     labs = []

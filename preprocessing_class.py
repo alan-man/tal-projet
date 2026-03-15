@@ -96,6 +96,23 @@ def load_movies(path2data): # 1 classe par répertoire
 
     return alltxts,labs
 
+
+def load_movies_test(path2data):
+    alltxts = []
+#    txt = open(path2data).read()
+#    alltxts.append(txt)
+    c = 0
+    with open(path2data, 'r') as file:
+        for line in file:        
+            #print(line)            
+            alltxts.append(line)
+            #c+=1
+            #if c == 2:
+            #    return alltxts
+    return alltxts
+
+
+
 # -------------- preprocessing
 
 class Preprocessing:

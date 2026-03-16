@@ -252,6 +252,7 @@ class Preprocessing:
         if self.rm_punctuation: text = text.translate(str.maketrans(self.punct, ' ' * len(self.punct)))
 
         if self.pos_tagging:
+            _, pos_tags = self.lemma_stem(text)
             return text, pos_tags
         return text
 

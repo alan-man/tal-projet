@@ -72,3 +72,4 @@ prout.save(sdir+fname+".dat")
 
 embed_model = HuggingFaceEmbeddings(model_name="BAAI/bge-base-en-v1.5")
 from langchain_huggingface import HuggingFaceEmbeddings
+

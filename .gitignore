@@ -5,3 +5,4 @@ __pycache__/
 *.dat
 *.npy
 models/
+*.pt

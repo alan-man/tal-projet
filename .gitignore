@@ -6,3 +6,8 @@ __pycache__/
 *.npy
 models/
 *.pt
+train_tokens_dist.pt
+trans_to_run.py
+pred_test_tokens_dist.pt
+pred_test_tokens_dist_2.pt
+pred_test_tokens_dist_3.pt

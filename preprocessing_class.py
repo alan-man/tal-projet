@@ -19,19 +19,6 @@ from typing import Literal
 # TODO
 # List different pre processing techniques
 
-# A) Transformation paramétrique du texte (pre-traitements)
-
-# Vous devez tester, par exemple, les cas suivants:
-# - transformation en minuscule ou pas
-# - suppression de la ponctuation
-# - transformation des mots entièrement en majuscule en marqueurs spécifiques
-# - suppression des chiffres ou pas
-# - conservation d'une partie du texte seulement (seulement la première ligne = titre, seulement la dernière ligne = résumé, ...)
-# - stemming
-# - ...
-
-# Vérifier systématiquement sur un exemple ou deux le bon fonctionnement des méthodes sur deux documents (au moins un de chaque classe).
-
 # ------------- GLOBAL LOADING
 
 NLP_EN = spacy.load("en_core_web_sm", disable=["parser", "ner"])

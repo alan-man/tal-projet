@@ -5,7 +5,6 @@ __pycache__/
 *.dat
 *.npy
 models/
-*.pt
 train_tokens_dist.pt
 test_tokens_dist.pt
 trans_to_run.py
@@ -18,3 +17,4 @@ pred_test_tokens_dist_3.pt
 /bert_dist_cache/
 /saving_files/
 *.pkl
+tokens/

@@ -1,10 +1,9 @@
+# not used for movies
+
 from preprocessing_class import Preprocessing, load_pres
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.model_selection import StratifiedShuffleSplit, train_test_split
-from sklearn.metrics import (
-    f1_score, average_precision_score,
-    roc_auc_score, precision_score, recall_score, accuracy_score
-)
+from sklearn.metrics import f1_score, precision_score, recall_score, roc_auc_score, average_precision_score, accuracy_score
 import numpy as np
 import string
 import torch
@@ -18,25 +17,14 @@ import spacy
 
 from preprocessing_class import Preprocessing, load_pres, load_movies
 
-# ─────────────────────────────────────────
-# CONFIGURATION
-# ─────────────────────────────────────────
+INPUT_TYPE = 'pos_tags'  # 'pos_tags', 'tfidf', 'count'
 
-# Choose input type: 'pos_tags', 'tfidf', or 'count'
-INPUT_TYPE = 'pos_tags'  # options: 'pos_tags', 'tfidf', 'count'
-
-print(f"Input type: {INPUT_TYPE}")
-
-# ─────────────────────────────────────────
-# DEVICE
-# ─────────────────────────────────────────
+RNN_TYPE = 'gru'  # 'lstm' or 'gru'
+DROPOUT = 0.4      
+EARLY_STOPPING_PATIENCE = 10  # stop if val F1 doesn't improve for N epochs
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
-
-# ─────────────────────────────────────────
-# LOAD DATASET
-# ─────────────────────────────────────────
 
 alltxt, alllabs = load_pres("Dataset/corpus.tache1.learn.utf8")
 alltxt, alllabs = np.array(alltxt), np.array(alllabs)
@@ -56,30 +44,7 @@ X_train_sub, X_val, y_train_sub, y_val = train_test_split(
     random_state=42
 )
 
-# ─────────────────────────────────────────
-# FEATURE EXTRACTION
-# ─────────────────────────────────────────
-
 if INPUT_TYPE == 'pos_tags':
-    # Original: Use POS tags
-    # punc = set(string.punctuation + '\n\r\t')
-    # punc.remove("'")
-    # custom_punctuation = "".join(punc)
-    
-    # prep_pos = Preprocessing(
-    #     low_case=False,
-    #     rm_punctuation=False,
-    #     rm_number=False,
-    #     word_norm=None,
-    #     pos_tagging=True,
-    #     all_capital=True,
-    #     cap_name=True,
-    #     rm_accent=False,
-    #     lang="french",
-    #     punct=custom_punctuation,
-    #     urls=False
-    # )
-
     nlp = spacy.load("fr_core_news_sm")
         
     def pos_with_tense(text):
@@ -99,17 +64,16 @@ if INPUT_TYPE == 'pos_tags':
             pos_tags.append(pos)
         return pos_tags
     
-    print("POS tagging train...")
+    print("POS tagging train")
     X_train_features = [pos_with_tense(str(t)) for t in X_train_sub]
-    print("POS tagging val...")
+    print("POS tagging val")
     X_val_features   = [pos_with_tense(str(t)) for t in X_val]
-    print("POS tagging test...")
+    print("POS tagging test")
     X_test_features  = [pos_with_tense(str(t)) for t in X_test]
     
 elif INPUT_TYPE in ['tfidf', 'count']:
     # Use TF-IDF or Count vectorizer
-    print(f"Vectorizing with {INPUT_TYPE.upper()}...")
-    
+    print("vect", INPUT_TYPE)    
     vectorizer = TfidfVectorizer(
         max_features=5000,
         max_df=0.95,
@@ -121,17 +85,12 @@ elif INPUT_TYPE in ['tfidf', 'count']:
         min_df=2,
         stop_words='french'
     )
-    
-    # Fit on train
     X_train_vec = vectorizer.fit_transform(X_train_sub)
     X_val_vec   = vectorizer.transform(X_val)
     X_test_vec  = vectorizer.transform(X_test)
     
     num_features = X_train_vec.shape[1]
-    print(f"Number of features: {num_features}")
     
-    # Convert sparse matrices to sequences of feature indices
-    # IMPORTANT: Shift indices by 2 to leave room for <PAD>=0 and <UNK>=1
     def sparse_to_sequences(X_sparse, top_k=50, shift=2):
         """
         Convert sparse TF-IDF/Count matrix to sequences.
@@ -143,7 +102,6 @@ elif INPUT_TYPE in ['tfidf', 'count']:
             # Get indices of top-k non-zero values
             top_indices = np.argsort(-row)[:top_k]
             top_indices = top_indices[row[top_indices] > 0]  # Only keep non-zero
-            # Shift by 2 to avoid conflict with <PAD> and <UNK>
             shifted_indices = (top_indices + shift).tolist() if len(top_indices) > 0 else [0]
             sequences.append(shifted_indices)
         return sequences
@@ -152,12 +110,7 @@ elif INPUT_TYPE in ['tfidf', 'count']:
     X_val_features   = sparse_to_sequences(X_val_vec)
     X_test_features  = sparse_to_sequences(X_test_vec)
 
-# ─────────────────────────────────────────
-# VOCAB — built from train only
-# ─────────────────────────────────────────
-
 if INPUT_TYPE == 'pos_tags':
-    # For POS tags: build vocab from unique tags in sequences
     def build_vocab(all_sequences):
         vocab = {"<PAD>": 0, "<UNK>": 1}
         for seq in all_sequences:
@@ -168,20 +121,11 @@ if INPUT_TYPE == 'pos_tags':
     
     vocab = build_vocab(X_train_features)
 else:
-    # For TF-IDF/Count: features are already numeric, just create vocab for shifted indices
-    # vocab[i] = i for all indices (0 to num_features + 1)
-    # 0 = <PAD>, 1 = <UNK>, 2..num_features+1 = feature indices
     vocab = {i: i for i in range(num_features + 2)}
     vocab["<PAD>"] = 0
     vocab["<UNK>"] = 1
 
 print(f"Vocab size: {len(vocab)}")
-print(f"Sequences sample (first 5): {X_train_features[:5]}")
-print(f"Input type: {INPUT_TYPE}")
-
-# ─────────────────────────────────────────
-# DATASET & DATALOADER
-# ─────────────────────────────────────────
 
 def collate_fn(batch):
     """Collate function to pad sequences in a batch."""
@@ -208,20 +152,15 @@ class SequenceDataset(Dataset):
         return self.encoded[idx], self.labels[idx]
 
 
-dataset_train    = SequenceDataset(X_train_features, y_train_sub, vocab)
+dataset_train = SequenceDataset(X_train_features, y_train_sub, vocab)
 dataloader_train = DataLoader(dataset_train, batch_size=32, shuffle=True,  collate_fn=collate_fn)
 
-dataset_val      = SequenceDataset(X_val_features, y_val, vocab)
-dataloader_val   = DataLoader(dataset_val,   batch_size=32, shuffle=False, collate_fn=collate_fn)
+dataset_val = SequenceDataset(X_val_features, y_val, vocab)
+dataloader_val = DataLoader(dataset_val,   batch_size=32, shuffle=False, collate_fn=collate_fn)
 
-dataset_test     = SequenceDataset(X_test_features, y_test, vocab)
-dataloader_test  = DataLoader(dataset_test,  batch_size=32, shuffle=False, collate_fn=collate_fn)
+dataset_test = SequenceDataset(X_test_features, y_test, vocab)
+dataloader_test = DataLoader(dataset_test,  batch_size=32, shuffle=False, collate_fn=collate_fn)
 
-print("Datasets ready")
-
-# ─────────────────────────────────────────
-# MODEL
-# ─────────────────────────────────────────
 
 class POSClassifier(nn.Module):
     def __init__(self, vocab_size, embed_dim, hidden_dim, num_classes,
@@ -256,12 +195,6 @@ class POSClassifier(nn.Module):
         hn     = torch.cat([hn[-2], hn[-1]], dim=1)  # concat forward + backward
         return self.classifier(self.dropout(hn))
 
-
-# ========== Configuration ==========
-RNN_TYPE = 'gru'  # 'lstm' or 'gru'
-DROPOUT = 0.4      # increased dropout to reduce overfitting
-EARLY_STOPPING_PATIENCE = 10  # stop if val F1 doesn't improve for N epochs
-
 model = POSClassifier(
     vocab_size=len(vocab),
     embed_dim=32,
@@ -270,15 +203,9 @@ model = POSClassifier(
     num_layers=2,
     dropout=DROPOUT,
     rnn_type=RNN_TYPE,
-).to(device)                          # move model to device
-
-print(f"Using RNN type: {RNN_TYPE}")
+).to(device)                          
 
 print(model)
-
-# ─────────────────────────────────────────
-# LOSS & OPTIMIZER
-# ─────────────────────────────────────────
 
 def compute_class_weights(labels):
     counts  = torch.bincount(torch.tensor(labels)).float()
@@ -288,28 +215,19 @@ def compute_class_weights(labels):
 
 class_weights = compute_class_weights(y_train_sub).to(device)  # fix: use train_sub, move to device
 criterion     = nn.CrossEntropyLoss(weight=class_weights)
-# Added L2 regularization (weight_decay) to reduce overfitting
 optimizer     = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-5)
-
-# ─────────────────────────────────────────
-# METRICS
-# ─────────────────────────────────────────
 
 def compute_metrics(all_labels, all_preds, all_probs):
     all_labels = np.array(all_labels)
     all_preds  = np.array(all_preds)
     all_probs  = np.array(all_probs)
     return {
-        "f1":            float(f1_score(all_labels, all_preds, average="binary")),
+        "f1": float(f1_score(all_labels, all_preds, average="binary")),
         "avg_precision": float(average_precision_score(all_labels, all_probs)),
-        "roc_auc":       float(roc_auc_score(all_labels, all_probs)),
-        "precision":     float(precision_score(all_labels, all_preds, zero_division=0)),
-        "recall":        float(recall_score(all_labels, all_preds)),
+        "roc_auc": float(roc_auc_score(all_labels, all_probs)),
+        "precision": float(precision_score(all_labels, all_preds, zero_division=0)),
+        "recall": float(recall_score(all_labels, all_preds)),
     }
-
-# ─────────────────────────────────────────
-# TRAIN / EVAL LOOP
-# ─────────────────────────────────────────
 
 def run_epoch(model, loader, optimizer, criterion, training=True):
     model.train() if training else model.eval()
@@ -321,8 +239,8 @@ def run_epoch(model, loader, optimizer, criterion, training=True):
 
     with ctx:
         for padded, lengths, labels in loader:
-            padded = padded.to(device)       # move batch to device
-            labels = labels.to(device)       # lengths stays on CPU for pack_padded_sequence
+            padded = padded.to(device)       
+            labels = labels.to(device)       
 
             if training:
                 optimizer.zero_grad()
@@ -343,18 +261,15 @@ def run_epoch(model, loader, optimizer, criterion, training=True):
             all_preds  .extend(preds.cpu().numpy())
             all_probs  .extend(probs[:, 1].detach().cpu().numpy())
 
-    metrics         = compute_metrics(all_labels, all_preds, all_probs)
+    metrics = compute_metrics(all_labels, all_preds, all_probs)
     metrics["loss"] = float(total_loss / len(loader))
     return metrics
 
-# ─────────────────────────────────────────
-# TRAINING + SAVING RESULTS
-# ─────────────────────────────────────────
 
-history        = []          # one entry per epoch
-best_f1        = 0.0
+history = []         
+best_f1 = 0.0
 best_model_state = None
-patience_counter = 0  # for early stopping
+patience_counter = 0  
 
 for epoch in range(50):
     train_m = run_epoch(model, dataloader_train, optimizer, criterion, training=True)
@@ -365,10 +280,11 @@ for epoch in range(50):
         best_f1          = val_m["f1"]
         best_model_state = {k: v.clone() for k, v in model.state_dict().items()}
         patience_counter = 0  # reset patience counter
-        improvement_marker = "↑ (BEST)"
+        print("improved")
+        
     else:
         patience_counter += 1
-        improvement_marker = f"(patience {patience_counter}/{EARLY_STOPPING_PATIENCE})"
+        print(f"(patience {patience_counter}/{EARLY_STOPPING_PATIENCE})")
 
     # store epoch results
     history.append({
@@ -378,25 +294,20 @@ for epoch in range(50):
     })
 
     print(
-        f"Epoch {epoch+1:2d} {improvement_marker:20s} | "
-        f"loss  train {train_m['loss']:.4f}  val {val_m['loss']:.4f} | "
-        f"f1    train {train_m['f1']:.3f}  val {val_m['f1']:.3f} | "
-        f"auc   train {train_m['roc_auc']:.3f}  val {val_m['roc_auc']:.3f} | "
-        f"ap    train {train_m['avg_precision']:.3f}  val {val_m['avg_precision']:.3f} | "
-        f"prec  train {train_m['precision']:.3f}  val {val_m['precision']:.3f} | "
-        f"rec   train {train_m['recall']:.3f}  val {val_m['recall']:.3f}"
+        f"loss train {train_m['loss']:.4f}  val {val_m['loss']:.4f} | "
+        f"f1 train {train_m['f1']:.3f}  val {val_m['f1']:.3f} | "
+        f"auc train {train_m['roc_auc']:.3f}  val {val_m['roc_auc']:.3f} | "
+        f"ap train {train_m['avg_precision']:.3f}  val {val_m['avg_precision']:.3f} | "
+        f"prec train {train_m['precision']:.3f}  val {val_m['precision']:.3f} | "
+        f"rec train {train_m['recall']:.3f}  val {val_m['recall']:.3f}"
     )
 
     # Early stopping: break if patience exceeded
     if patience_counter >= EARLY_STOPPING_PATIENCE:
-        print(f"\n⚠ Early stopping at epoch {epoch+1}: No improvement for {EARLY_STOPPING_PATIENCE} epochs")
+        print(f"\nEarly stopping at epoch {epoch+1}")
         break
 
 print(f"\nBest val F1: {best_f1:.3f} (at epoch {len(history) - patience_counter})")
-
-# ─────────────────────────────────────────
-# TEST SET EVALUATION
-# ─────────────────────────────────────────
 
 model.load_state_dict(best_model_state)
 torch.save(model.state_dict(), "model_rnn_pos_tag_tense_gru.pth")
@@ -413,10 +324,6 @@ print(
     f"rec {test_m['recall']:.3f}"
 )
 
-# ─────────────────────────────────────────
-# SAVE ALL RESULTS TO JSON
-# ─────────────────────────────────────────
-
 results = {
     "run_date":  datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     "device":    str(device),
@@ -432,8 +339,8 @@ results = {
     },
     "best_val_f1": best_f1,
     "epochs_trained": len(history),
-    "history":   history,           # all epochs, train + val metrics
-    "test":      test_m,            # final test metrics
+    "history":   history,            
+    "test":      test_m,           
 }
 
 with open("results_rnn_pos_tense_gru.json", "w") as f:

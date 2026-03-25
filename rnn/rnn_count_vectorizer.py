@@ -23,9 +23,7 @@ from nltk.corpus import stopwords
 
 final_stopwords_list = stopwords.words('french')
 
-# ─────────────────────────────────────────
-# CONFIGURATION
-# ─────────────────────────────────────────
+
 VECTORIZER_TYPE = "count"  # 'count' or 'tfidf'
 RNN_TYPE = 'gru'  # 'lstm' or 'gru'
 DATASET = "pres" # "movie"
@@ -49,33 +47,21 @@ DROPOUT = 0.4
 MAX_FEATURES = 10000 # changed to 10000!
 NGRAM_RANGE = (1, 1)  # (1, 1) unigram, (1, 2) bigram
 
-# ─────────────────────────────────────────
-# DEVICE
-# ─────────────────────────────────────────
-
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
 if device.type == 'cuda':
     print(f"GPU memory available: {torch.cuda.get_device_properties(device).total_memory / 1e9:.2f} GB")
 
-# ─────────────────────────────────────────
-# DATA LOADING
-# ─────────────────────────────────────────
-
-print("Loading data...")
+print("DATASET", DATASET)
 if DATASET == "pres":
     alltxt, alllabs = load_pres("Dataset/corpus.tache1.learn.utf8")
     alltxt = np.array(alltxt)
     # Convert labels: 1 -> 0, -1 -> 1
     alllabs = np.where(np.array(alllabs) == 1, 0, 1)
-    print(f"  Total samples: {len(alltxt)}")
-    print(f"  Label distribution: {np.bincount(alllabs)}")
 else:
     path = "./Dataset/movies1000/"
     alltxt,alllabs = load_movies(path)
     alltxt, alllabs = np.array(alltxt), np.array(alllabs)
-    print(f"  Total samples: {len(alltxt)}")
-    print(f"  Label distribution: {np.bincount(alllabs)}")
 
 
 # Train/val/test split
@@ -93,14 +79,7 @@ X_train_sub, X_val, y_train_sub, y_val = train_test_split(
     random_state=RANDOM_STATE
 )
 
-print(f"  Train: {len(X_train_sub)}, Val: {len(X_val)}, Test: {len(X_test)}")
-
-# ─────────────────────────────────────────
-# PREPROCESSING
-# ─────────────────────────────────────────
-
-print("\nSetting up preprocessing...")
-
+print(f"Train: {len(X_train_sub)}, Val: {len(X_val)}, Test: {len(X_test)}")
 punc = set(string.punctuation + '\n\r\t')
 punc.discard("'")
 custom_punctuation = "".join(punc)
@@ -121,18 +100,15 @@ prep = Preprocessing(
     urls=False
 )
 
-print("Preprocessing train...")
+print("Preprocessing train")
 X_train_prep = [prep.process(t) for t in X_train_sub]
-print("Preprocessing val...")
+print("Preprocessing val")
 X_val_prep = [prep.process(t) for t in X_val]
-print("Preprocessing test...")
+print("Preprocessing test")
 X_test_prep = [prep.process(t) for t in X_test]
 
-# ─────────────────────────────────────────
-# VECTORIZATION
-# ─────────────────────────────────────────
 
-print(f"\nVectorizing with {VECTORIZER_TYPE}...")
+print(f"\nVectorizing: {VECTORIZER_TYPE}...")
 
 if VECTORIZER_TYPE == "tfidf":
     vectorizer = TfidfVectorizer(
@@ -155,11 +131,7 @@ X_train_vec = vectorizer.fit_transform(X_train_prep)
 X_val_vec = vectorizer.transform(X_val_prep)
 X_test_vec = vectorizer.transform(X_test_prep)
 
-print(f"  Vocabulary size: {X_train_vec.shape[1]}")
-
-# ─────────────────────────────────────────
-# CONVERT TO SEQUENCES
-# ─────────────────────────────────────────
+print(f"Vocabulary size: {X_train_vec.shape[1]}")
 
 def sparse_to_sequences_preserve_order(X_sparse, shift=2):
     """
@@ -169,30 +141,21 @@ def sparse_to_sequences_preserve_order(X_sparse, shift=2):
     sequences = []
     for i in range(X_sparse.shape[0]):
         row = X_sparse[i].toarray().flatten()
-        # Get all non-zero feature indices in their original order
         feature_indices = np.where(row > 0)[0]
         shifted_indices = (feature_indices + shift).tolist() if len(feature_indices) > 0 else [0]
         sequences.append(shifted_indices)
     return sequences
 
-print("Converting to sequences...")
 X_train_seqs = sparse_to_sequences_preserve_order(X_train_vec)
 X_val_seqs = sparse_to_sequences_preserve_order(X_val_vec)
 X_test_seqs = sparse_to_sequences_preserve_order(X_test_vec)
 
-# ─────────────────────────────────────────
-# VOCAB
-# ─────────────────────────────────────────
 
 vocab = {i: i for i in range(X_train_vec.shape[1] + 2)}
 vocab["<PAD>"] = 0
 vocab["<UNK>"] = 1
 
 print(f"Vocab size: {len(vocab)}")
-
-# ─────────────────────────────────────────
-# DATASET & DATALOADER
-# ─────────────────────────────────────────
 
 def collate_fn(batch):
     """Collate function to pad sequences in a batch."""
@@ -228,12 +191,6 @@ dataloader_val = DataLoader(dataset_val, batch_size=BATCH_SIZE, shuffle=False, c
 dataset_test = SequenceDataset(X_test_seqs, y_test, vocab)
 dataloader_test = DataLoader(dataset_test, batch_size=BATCH_SIZE, shuffle=False, collate_fn=collate_fn)
 
-print("Datasets ready")
-
-# ─────────────────────────────────────────
-# MODEL
-# ─────────────────────────────────────────
-
 class RNNClassifier(nn.Module):
     def __init__(self, vocab_size, embed_dim, hidden_dim, num_layers=1, 
                  dropout=0.3, rnn_type='lstm'):
@@ -266,22 +223,15 @@ class RNNClassifier(nn.Module):
         hn = torch.cat([hn[-2], hn[-1]], dim=1)  # concat forward + backward
         return self.classifier(self.dropout(hn))
 
-
-print(f"\nLoading model ({RNN_TYPE})...")
 model = RNNClassifier(
     vocab_size=len(vocab),
     embed_dim=EMBED_DIM,
     hidden_dim=HIDDEN_DIM,
     num_layers=NUM_LAYERS,
     dropout=DROPOUT,
-    rnn_type=RNN_TYPE,
-).to(device)
+    rnn_type=RNN_TYPE,).to(device)
 
 print(model)
-
-# ─────────────────────────────────────────
-# LOSS & OPTIMIZER
-# ─────────────────────────────────────────
 
 def compute_class_weights(labels):
     counts = torch.bincount(torch.tensor(labels)).float()
@@ -293,9 +243,6 @@ class_weights = compute_class_weights(y_train_sub).to(device)
 criterion = nn.CrossEntropyLoss(weight=class_weights)
 optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=1e-5)
 
-# ─────────────────────────────────────────
-# METRICS HELPER
-# ─────────────────────────────────────────
 
 def compute_metrics(all_labels, all_preds, all_probs):
     """Compute evaluation metrics."""
@@ -320,9 +267,6 @@ def compute_metrics(all_labels, all_preds, all_probs):
         "accuracy": float(accuracy_score(all_labels, all_preds)),
     }
 
-# ─────────────────────────────────────────
-# TRAIN / EVAL LOOP
-# ─────────────────────────────────────────
 
 def run_epoch(model, loader, optimizer, criterion, training=True):
     """Run one epoch of training or evaluation."""
@@ -361,14 +305,6 @@ def run_epoch(model, loader, optimizer, criterion, training=True):
     metrics["loss"] = float(total_loss / len(loader))
     return metrics
 
-# ─────────────────────────────────────────
-# TRAINING WITH EARLY STOPPING
-# ─────────────────────────────────────────
-
-print("\n" + "="*80)
-print("TRAINING")
-print("="*80)
-
 history = []
 best_f1 = 0.0
 best_model_state = None
@@ -385,7 +321,7 @@ for epoch in range(EPOCHS):
         best_f1 = val_m["f1"]
         best_model_state = {k: v.clone() for k, v in model.state_dict().items()}
         patience_counter = 0
-        improvement_marker = "↑ (BEST)"
+        improvement_marker = "improved"
     else:
         patience_counter += 1
         improvement_marker = f"(patience {patience_counter}/{EARLY_STOPPING_PATIENCE})"
@@ -398,27 +334,19 @@ for epoch in range(EPOCHS):
 
     print(
         f"{improvement_marker:25s} | "
-        f"loss  train {train_m['loss']:.4f}  val {val_m['loss']:.4f} | "
-        f"f1    train {train_m['f1']:.3f}  val {val_m['f1']:.3f} | "
-        f"auc   train {train_m['roc_auc']:.3f}  val {val_m['roc_auc']:.3f} | "
-        f"prec  train {train_m['precision']:.3f}  val {val_m['precision']:.3f} | "
-        f"rec   train {train_m['recall']:.3f}  val {val_m['recall']:.3f}"
+        f"loss train {train_m['loss']:.4f}  val {val_m['loss']:.4f} | "
+        f"f1 train {train_m['f1']:.3f}  val {val_m['f1']:.3f} | "
+        f"auc train {train_m['roc_auc']:.3f}  val {val_m['roc_auc']:.3f} | "
+        f"prec train {train_m['precision']:.3f}  val {val_m['precision']:.3f} | "
+        f"rec train {train_m['recall']:.3f}  val {val_m['recall']:.3f}"
     )
 
     # Early stopping check
     if patience_counter >= EARLY_STOPPING_PATIENCE:
-        print(f"\nEarly stopping at epoch {epoch+1}: No improvement for {EARLY_STOPPING_PATIENCE} epochs")
+        print(f"\nEarly stopping at epoch {epoch+1}")
         break
 
 print(f"\nBest val F1: {best_f1:.3f}")
-
-# ─────────────────────────────────────────
-# TEST EVALUATION
-# ─────────────────────────────────────────
-
-print("\n" + "="*80)
-print("TEST EVALUATION")
-print("="*80)
 
 model.load_state_dict(best_model_state)
 torch.save(model.state_dict(), f"{SAVING_FILE_NAME}.pth")
@@ -430,10 +358,6 @@ print(
     f"prec {test_m['precision']:.4f} | rec {test_m['recall']:.4f} | "
     f"auc {test_m['roc_auc']:.4f} | ap {test_m['avg_precision']:.4f}"
 )
-
-# ─────────────────────────────────────────
-# SAVE RESULTS
-# ─────────────────────────────────────────
 
 results = {
     "run_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),

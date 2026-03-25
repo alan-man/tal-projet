@@ -17,10 +17,11 @@ from torch.cuda.amp import autocast, GradScaler
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import (
     f1_score, precision_score, recall_score, 
-    roc_auc_score, average_precision_score
+    roc_auc_score, average_precision_score, accuracy_score
 )
 from datetime import datetime
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
+from preprocessing_class import Preprocessing, load_pres, load_movies
 
 # Fix CUDA memory fragmentation
 os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
@@ -28,6 +29,8 @@ os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
 # ─────────────────────────────────────────
 # CONFIGURATION
 # ─────────────────────────────────────────
+
+DATASET = "pres"
 
 RANDOM_STATE = 42
 TEST_SIZE = 0.20
@@ -40,8 +43,10 @@ LEARNING_RATE = 2e-5
 EARLY_STOPPING_PATIENCE = 5
 USE_HALF_PRECISION = False   # Use fp16 to save memory (~50% reduction)
 
+
 # Model selection
 MODEL_NAME = "almanach/camemberta-base" # "camembert-base" # "almanach/camemberta-base" 'camembert-base' 
+SAVING_FILE_NAME =  DATASET + "_transformer_"
 
 # ─────────────────────────────────────────
 # DEVICE
@@ -55,41 +60,31 @@ if device.type == 'cuda':
 # ─────────────────────────────────────────
 # DATA LOADING
 # ─────────────────────────────────────────
+alltxt, alllabs = None, None
 
-def load_pres(fname):
-    """
-    Load sentiment data from file.
-    Labels: M = -1, C = 1 (positive)
-    """
-    alltxts = []
-    alllabs = []
-    with codecs.open(fname, 'r', 'utf-8') as s:
-        while True:
-            txt = s.readline()
-            if len(txt) < 5:
-                break
-            
-            # Extract label and text
-            lab = re.sub(r"<[0-9]*:[0-9]*:(.)>.*", r"\1", txt)
-            txt = re.sub(r"<[0-9]*:[0-9]*:.>(.*)", r"\1", txt)
-            
-            if lab.count('M') > 0:
-                alllabs.append(-1)
-            else:
-                alllabs.append(1)
-            alltxts.append(txt)
-    
-    return alltxts, alllabs
+if DATASET == "pres": 
+    print("DATASET", DATASET)
+
+    print("Loading data...")
+    alltxt, alllabs = load_pres("Dataset/corpus.tache1.learn.utf8")
+    alltxt, alllabs = np.array(alltxt), np.array(alllabs)
+    # Convert labels: 1 -> 0, -1 -> 1
+    alllabs = np.where(alllabs == 1, 0, 1)
+
+    print(f"  Total samples: {len(alltxt)}")
+    print(f"  Label distribution: {np.unique(alllabs, return_counts=True)}")
+
+else:
+    print("Loading data...")
+    alltxt, alllabs = load_movies("./Dataset/movies1000/")
+    alltxt, alllabs = np.array(alltxt), np.array(alllabs)
+    # Convert labels: 1 -> 0, -1 -> 1
+    alllabs = np.where(alllabs == 1, 0, 1)
+
+    print(f"  Total samples: {len(alltxt)}")
+    print(f"  Label distribution: {np.unique(alllabs, return_counts=True)}")
 
 
-print("Loading data...")
-alltxt, alllabs = load_pres("Dataset/corpus.tache1.learn.utf8")
-alltxt, alllabs = np.array(alltxt), np.array(alllabs)
-print(f"  Total samples: {len(alltxt)}")
-print(f"  Label distribution: {np.unique(alllabs, return_counts=True)}")
-
-# Convert labels: 1 -> 0, -1 -> 1
-alllabs = np.where(alllabs == 1, 0, 1)
 val, counts = np.unique(alllabs, return_counts=True)
 class_weights = 1 / counts
 
@@ -209,12 +204,22 @@ optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE) # weight_decay=0.01
 
 def compute_metrics(all_labels, all_preds, all_probs):
     """Compute evaluation metrics."""
+    if DATASET == "pres":
+        return {
+            "f1":            float(f1_score(all_labels, all_preds, average="macro")),
+            "precision":     float(precision_score(all_labels, all_preds, average="macro", zero_division=0)),
+            "recall":        float(recall_score(all_labels, all_preds, average="macro", zero_division=0)),
+            "roc_auc":       float(roc_auc_score(all_labels, all_probs)),
+            "avg_precision": float(average_precision_score(all_labels, all_probs)),
+        }
+        
     return {
         "f1":            float(f1_score(all_labels, all_preds, average="binary")),
         "precision":     float(precision_score(all_labels, all_preds, average="binary", zero_division=0)),
-        "recall":        float(recall_score(all_labels, all_preds, average="binary")),
+        "recall":        float(recall_score(all_labels, all_preds, average="binary", zero_division=0)),
         "roc_auc":       float(roc_auc_score(all_labels, all_probs)),
         "avg_precision": float(average_precision_score(all_labels, all_probs)),
+        "accuracy":      float(accuracy_score(all_labels, all_preds)),
     }
 
 
@@ -350,7 +355,7 @@ for epoch in range(EPOCHS):
 
     # Early stopping check
     if patience_counter >= EARLY_STOPPING_PATIENCE:
-        print(f"\n⚠ Early stopping at epoch {epoch+1}: No improvement for {EARLY_STOPPING_PATIENCE} epochs")
+        print(f"\nEarly stopping at epoch {epoch+1}: No improvement for {EARLY_STOPPING_PATIENCE} epochs")
         break
 
 print(f"\nBest val F1: {best_f1:.4f}")
@@ -364,7 +369,7 @@ print("TEST EVALUATION")
 print("="*80)
 
 model.load_state_dict(best_model_state)
-torch.save(model.state_dict(), "model_transformer_camberta.pth")
+torch.save(model.state_dict(), "{SAVING_FILE_NAME}.pth")
 
 test_m = run_epoch(model, test_dataloader, optimizer, loss_fn, training=False, scaler=scaler)
 
@@ -394,8 +399,8 @@ results = {
     "test": test_m,
 }
 
-with open("results_transformer_camberta.json", "w") as f:
+with open("{SAVING_FILE_NAME}_results.json", "w") as f:
     json.dump(results, f, indent=2)
 
-print("\n✓ Results saved to results_transformer_camberta.json")
-print("✓ Model saved to model_transformer_camberta.pth")
+print(f"\n✓ Results saved to {SAVING_FILE_NAME}_results.json")
+print(f"✓ Model saved to {SAVING_FILE_NAME}.pth")

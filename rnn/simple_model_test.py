@@ -17,7 +17,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import (
     f1_score, average_precision_score, roc_auc_score, 
-    precision_score, recall_score, classification_report
+    precision_score, recall_score, accuracy_score
 )
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.ensemble import RandomForestClassifier
@@ -25,16 +25,20 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.svm import LinearSVC, SVC
 from nltk.corpus import stopwords
 
-from preprocessing_class import Preprocessing, load_pres
+from preprocessing_class import Preprocessing, load_movies, load_pres
 
 
 # ==================== Configuration ====================
-
+DATASET = "pres"
 RANDOM_STATE = 42
 TEST_SIZE = 0.20
+MAX_FEATURE = 5000
+SAVING_FILE_NAME =  DATASET + "_simple_model_"
+
 
 # Stopwords
 STOPWORDS_FR = stopwords.words('french')
+STOPWORDS_EN = stopwords.words('english')
 
 # Punctuation
 PUNC = set(string.punctuation + '\n\r\t')
@@ -46,6 +50,8 @@ CUSTOM_PUNCTUATION = "".join(PUNC)
 
 def get_preprocessing_configs():
     """Returns a dict of preprocessing configurations to test."""
+
+    lang = "french" if DATASET == "pres" else "english"
     
     configs = {
         "basic_lower": Preprocessing(
@@ -57,7 +63,7 @@ def get_preprocessing_configs():
             all_capital=True,
             cap_name=True,
             rm_accent=False,
-            lang="french",
+            lang=lang,
             punct=CUSTOM_PUNCTUATION,
             urls=False
         ),
@@ -70,14 +76,13 @@ def get_preprocessing_configs():
             all_capital=True,
             cap_name=True,
             rm_accent=False,
-            lang="french",
+            lang=lang,
             punct=CUSTOM_PUNCTUATION,
             urls=False
         ),
     }
     return configs
 
-MAX_FEATURE = 5000
 
 # ==================== Vectorizer Configs ====================
 
@@ -133,13 +138,13 @@ def get_model_configs():
     """Returns a dict of model configurations to test."""
     
     configs = {
-        # "naive_bayes": MultinomialNB(alpha=1.0),
-        # "logistic_regression": LogisticRegression(
-        #     class_weight="balanced",
-        #     solver='lbfgs',
-        #     max_iter=5000,
-        #     random_state=RANDOM_STATE
-        # ),
+        "naive_bayes": MultinomialNB(alpha=1.0),
+        "logistic_regression": LogisticRegression(
+            class_weight="balanced",
+            solver='lbfgs',
+            max_iter=5000,
+            random_state=RANDOM_STATE
+        ),
         "linear_svm": LinearSVC(
             class_weight="balanced",
             penalty='l2',
@@ -147,21 +152,20 @@ def get_model_configs():
             max_iter=5000,
             random_state=RANDOM_STATE
         ),
-        # "svm_rbf": SVC(
-        #     kernel='rbf',
-        #     max_iter=5000,
-        #     random_state=RANDOM_STATE,
-        #     probability=True
-        # ),
-        # "random_forest": RandomForestClassifier(
-        #     n_estimators=100,
-        #     random_state=RANDOM_STATE,
-        #     class_weight='balanced',
-        #     n_jobs=-1
-        # ),
+        "svm_rbf": SVC(
+            kernel='rbf',
+            max_iter=5000,
+            random_state=RANDOM_STATE,
+            probability=True
+        ),
+        "random_forest": RandomForestClassifier(
+            n_estimators=100,
+            random_state=RANDOM_STATE,
+            class_weight='balanced',
+            n_jobs=-1
+        ),
     }
     return configs
-
 
 # ==================== Metrics Computation ====================
 
@@ -177,13 +181,22 @@ def compute_metrics(y_true, y_pred, y_proba=None):
     Returns:
         dict with metrics
     """
-    metrics = {
-        "f1_macro": f1_score(y_true, y_pred, average='macro', zero_division=0),
-        "f1_weighted": f1_score(y_true, y_pred, average='weighted', zero_division=0),
-        "precision_macro": precision_score(y_true, y_pred, average='macro', zero_division=0),
-        "recall_macro": recall_score(y_true, y_pred, average='macro', zero_division=0),
-    }
-    
+    if DATASET == "pres":
+        metrics = {
+            "f1_macro": f1_score(y_true, y_pred, average='macro', zero_division=0),
+            "f1_weighted": f1_score(y_true, y_pred, average='weighted', zero_division=0),
+            "precision_macro": precision_score(y_true, y_pred, average='macro', zero_division=0),
+            "recall_macro": recall_score(y_true, y_pred, average='macro', zero_division=0),
+        }
+    else:
+        metrics = {
+            "f1_macro": f1_score(y_true, y_pred, average='macro', zero_division=0),
+            "f1_weighted": f1_score(y_true, y_pred, average='weighted', zero_division=0),
+            "precision_macro": precision_score(y_true, y_pred, average='macro', zero_division=0),
+            "recall_macro": recall_score(y_true, y_pred, average='macro', zero_division=0),
+            "accuracy": float(accuracy_score(y_true, y_pred)),
+        }
+
     # For binary classification, add AUC and AP
     if y_proba is not None and len(np.unique(y_true)) == 2:
         try:
@@ -208,15 +221,23 @@ def load_and_split_data(data_path, test_size=TEST_SIZE):
     """
     print(f"Loading data from {data_path}...")
     
-    # Load and convert labels
-    alltxt, alllabs = load_pres(data_path)
-    alltxt = np.array(alltxt)
-    # Convert labels: 1 -> 0, -1 -> 1
-    alllabs = np.where(np.array(alllabs) == 1, 0, 1)
-    
-    print(f"  Total samples: {len(alltxt)}")
-    print(f"  Label distribution: {np.bincount(alllabs)}")
-    
+    print("DATASET ", DATASET)
+
+    if DATASET == "pres":
+        # Load and convert labels
+        alltxt, alllabs = load_pres(data_path)
+        alltxt = np.array(alltxt)
+        # Convert labels: 1 -> 0, -1 -> 1
+        alllabs = np.where(np.array(alllabs) == 1, 0, 1)
+        
+        print(f"  Total samples: {len(alltxt)}")
+        print(f"  Label distribution: {np.bincount(alllabs)}")
+    else:
+        alltxt,alllabs = load_movies(data_path)
+        alltxt, alllabs = np.array(alltxt), np.array(alllabs)
+        print(f"  Total samples: {len(alltxt)}")
+        print(f"  Label distribution: {np.bincount(alllabs)}")
+        
     # Train/test split
     X_train, X_test, y_train, y_test = train_test_split(
         alltxt, alllabs,
@@ -257,8 +278,8 @@ def run_experiment(X_train, X_test, y_train, y_test,
         ])
         
         # Preprocess texts
-        X_train_prep = [preprocessor.process(t) for t in X_train]
-        X_test_prep = [preprocessor.process(t) for t in X_test]
+        X_train_prep = [preprocessor.process(str(t)) for t in X_train]
+        X_test_prep = [preprocessor.process(str(t)) for t in X_test]
         
         # ===== Cross-validation on train set =====
         # Use only metrics that don't require predict_proba
@@ -301,14 +322,26 @@ def run_experiment(X_train, X_test, y_train, y_test,
                 y_cv_proba = None
         
         # Compute mean CV metrics
-        cv_metrics = {
-            "f1_macro": np.mean(cv_results['test_f1_macro']),
-            "f1_std": np.std(cv_results['test_f1_macro']),
-            "precision_macro": np.mean(cv_results['test_precision_macro']),
-            "recall_macro": np.mean(cv_results['test_recall_macro']),
-            "roc_auc": None,
-            "avg_precision": None,
-        }
+
+        if DATASET == "pres":
+            cv_metrics = {
+                "f1_macro": np.mean(cv_results['test_f1_macro']),
+                "f1_std": np.std(cv_results['test_f1_macro']),
+                "precision_macro": np.mean(cv_results['test_precision_macro']),
+                "recall_macro": np.mean(cv_results['test_recall_macro']),
+                "roc_auc": None,
+                "avg_precision": None,
+            }
+        else:
+            cv_metrics = {
+                "f1_macro": np.mean(cv_results['test_f1_macro']),
+                "f1_std": np.std(cv_results['test_f1_macro']),
+                "precision_macro": np.mean(cv_results['test_precision_macro']),
+                "recall_macro": np.mean(cv_results['test_recall_macro']),
+                "accuracy": np.mean(cv_results['test_accuracy']), # check of work
+                "roc_auc": None,
+                "avg_precision": None,
+            }
         
         # If we got probabilities, compute AUC and AP
         if y_cv_proba is not None:
@@ -350,7 +383,7 @@ def run_experiment(X_train, X_test, y_train, y_test,
             "status": "success"
         }
         
-        print(f"✓ (cv_f1: {cv_metrics['f1_macro']:.4f}, test_f1: {test_metrics['f1_macro']:.4f})")
+        print(f"(cv_f1: {cv_metrics['f1_macro']:.4f}, test_f1: {test_metrics['f1_macro']:.4f})")
         return result
         
     except Exception as e:
@@ -397,7 +430,7 @@ def run_all_experiments(X_train, X_test, y_train, y_test):
 
 # ==================== Results Saving & Analysis ====================
 
-def save_results(results, output_file="model_test_with_cv_results_linsvc.json"):
+def save_results(results, output_file=f"{SAVING_FILE_NAME}.json"):
     """Save results to JSON file."""
     
     with open(output_file, 'w') as f:
@@ -426,26 +459,42 @@ def analyze_results(results):
         # Create dataframe for analysis
         data = []
         for r in successful:
-            row = {
-                "preprocessing": r["prep"],
-                "vectorizer": r["vectorizer"],
-                "model": r["model"],
-                "cv_f1": r["cv_metrics"]["f1_macro"],
-                "cv_f1_std": r["cv_metrics"]["f1_std"],
-                "test_f1": r["test_metrics"]["f1_macro"],
-                "test_precision": r["test_metrics"]["precision_macro"],
-                "test_recall": r["test_metrics"]["recall_macro"],
-                "test_roc_auc": r["test_metrics"].get("roc_auc"),
-                "test_avg_precision": r["test_metrics"].get("avg_precision"),
-            }
-            data.append(row)
-        
+            if DATASET == 'pres':
+                row = {
+                    "preprocessing": r["prep"],
+                    "vectorizer": r["vectorizer"],
+                    "model": r["model"],
+                    "cv_f1": r["cv_metrics"]["f1_macro"],
+                    "cv_f1_std": r["cv_metrics"]["f1_std"],
+                    "test_f1": r["test_metrics"]["f1_macro"],
+                    "test_precision": r["test_metrics"]["precision_macro"],
+                    "test_recall": r["test_metrics"]["recall_macro"],
+                    "test_roc_auc": r["test_metrics"].get("roc_auc"),
+                    "test_avg_precision": r["test_metrics"].get("avg_precision"),
+                }
+                data.append(row)
+            else:
+                row = {
+                    "preprocessing": r["prep"],
+                    "vectorizer": r["vectorizer"],
+                    "model": r["model"],
+                    "cv_f1": r["cv_metrics"]["f1_macro"],
+                    "cv_f1_std": r["cv_metrics"]["f1_std"],
+                    "test_f1": r["test_metrics"]["f1_macro"],
+                    "test_precision": r["test_metrics"]["precision_macro"],
+                    "test_recall": r["test_metrics"]["recall_macro"],
+                    "test_roc_auc": r["test_metrics"].get("roc_auc"),
+                    "test_avg_precision": r["test_metrics"].get("avg_precision"),
+                    "test_accuracy": r["test_metrics"].get("accuracy"), # test if work
+                }
+                data.append(row)        
         df = pd.DataFrame(data)
         
         # Best by CV F1
         print("\n" + "-"*80)
         print("TOP 10 MODELS BY CROSS-VALIDATION F1 (MACRO)")
         print("-"*80)
+
         top10_cv = df.nlargest(10, 'cv_f1')[
             ['preprocessing', 'vectorizer', 'model', 'cv_f1', 'cv_f1_std', 'test_f1']
         ]
@@ -483,22 +532,22 @@ def main():
     print("="*80)
     
     # Load and split data
-    X_train, X_test, y_train, y_test = load_and_split_data(
-        "Dataset/corpus.tache1.learn.utf8"
-    )
+    path =  "Dataset/corpus.tache1.learn.utf8" if DATASET == "pres" else "./Dataset/movies1000/"
+    X_train, X_test, y_train, y_test = load_and_split_data(path)
     
     # Run all experiments
     results = run_all_experiments(X_train, X_test, y_train, y_test)
-    
+
+
     # Save results
-    output_file = f"model_test_results_lin_scv_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    output_file = f"{SAVING_FILE_NAME}{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
     save_results(results, output_file)
     
     # Analyze and display results
     analyze_results(results)
     
     print("\n" + "="*80)
-    print("✓ Model testing complete!")
+    print("Model testing complete!")
     print("="*80)
 
 

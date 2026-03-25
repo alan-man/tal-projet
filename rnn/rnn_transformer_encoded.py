@@ -490,7 +490,7 @@ with open(f"{SAVING_FILE_NAME}.json", "w") as f:
 print(f"\nResults saved to {SAVING_FILE_NAME}.json")
 print(f"Model saved to {SAVING_FILE_NAME}.pth")
 
-
-print(f"\nLoading transformer encoder ({TRANSFORMER_MODEL})...")
+print("DATASET ", DATASET)
+print(f"\nLoaded transformer encoder ({TRANSFORMER_MODEL})...")
 print(f"Transformer embedding dimension: {EMBED_DIM}")
 print(f"\nLoaded model ({RNN_TYPE})...")

@@ -9,15 +9,11 @@ from nltk.corpus import stopwords
 from nltk.tag import pos_tag
 from nltk.tokenize import word_tokenize
 
-import re, os, spacy, string, unicodedata, codecs    # for french lemming spacy
+import re, os, spacy, string, unicodedata, codecs
 
 from typing import Literal
 
 # USE SPARSE MATRIX !!
-
-# different things to test
-# TODO
-# List different pre processing techniques
 
 # ------------- GLOBAL LOADING
 
@@ -86,8 +82,8 @@ def load_movies(path2data): # 1 classe par répertoire
 
 def load_movies_test(path2data):
     alltxts = []
-#    txt = open(path2data).read()
-#    alltxts.append(txt)
+#   txt = open(path2data).read()
+#   alltxts.append(txt)
     c = 0
     with open(path2data, 'r') as file:
         for line in file:        
@@ -98,13 +94,12 @@ def load_movies_test(path2data):
             #    return alltxts
     return alltxts
 
-
-
 # -------------- preprocessing
 
 class Preprocessing:
     """ 
     Class to realise the preprocessing.
+    Don't use for pos tagging with verbs tense.
     """
 
     def __init__(self, 
@@ -121,8 +116,7 @@ class Preprocessing:
                 urls : bool = True 
                 ):
         """Store preprocessing configuration and prepare language tools."""
-
-        # basic flags
+        
         self.low_case = low_case
         self.rm_punctuation = rm_punctuation
         self.rm_number = rm_number
@@ -135,7 +129,6 @@ class Preprocessing:
         self.punct = punct
         self.urls = urls
 
-        # choose language specific resources
         if lang == "english":
             self.nlp = NLP_EN
             self.stemmer = STEM_EN
@@ -157,36 +150,30 @@ class Preprocessing:
                 nltk.download('stopwords')
                 self.stopwords = set(stopwords.words("french"))
 
-        # placeholder for any additional initializations
-        # e.g. a regex for url removal
         self._url_pattern = re.compile(r'https?://\S+|www\.\S+')
 
     def __str__(self):
-        # Filter only the attributes you want, or just print them all
         output = "Configuration Flags:\n"
         for key, value in vars(self).items():
             output += f"  {key}: {value}\n"
         return output
 
-    # functions to process
     def lower_case(self, text : str):
         """ Lower case text and if keep all caps words. Don't recognize names to keep them in cap."""
 
         if self.all_capital:
             return re.sub(
                 r'\b\w+\b',
-                lambda m: m.group(0) if m.group(0).isupper() else m.group(0).lower(), # case "HELLO," not include ","
+                lambda m: m.group(0) if m.group(0).isupper() else m.group(0).lower(),
                 text
             )
 
         return text.lower()
 
     def lemma_stem(self, text:str):
-    
-        """Lemmatize/stem `text` according to instance settings.
-        Proper nouns or ALL-CAPS tokens are preserved when ``cap_name`` is True.
+        """Lemmatize/stem text according to instance settings.
+        Proper nouns or ALL-CAPS words are preserved when cap_name is True.
         """
-        # use the resources initialized on the object rather than globals
         lem = self.nlp
         stem = self.stemmer
         
@@ -219,12 +206,9 @@ class Preprocessing:
         return processed_txt
 
     def process(self, text : str):
-        # preprocess a text
         """Réalise le pré-processing du texte. Renvoie les tokens."""
-        # conservation d'une partie du texte? 
 
         if not self.urls:
-            # use compiled pattern instead of boolean flag
             text = re.sub(self._url_pattern, 'URL', text)
 
         if self.word_norm:
@@ -243,12 +227,13 @@ class Preprocessing:
             return text, pos_tags
         return text
 
-    def __call__(self, text): # for count vectorizer
+    def __call__(self, text): # for vectorizer passing preprocessing need call
         return self.process(text)
 
-# pos cannot be returned in count vectorizer
+    # pos tags cannot be returned in count vectorizer
 
 if __name__ == "__main__":
+    # testings
     prep = Preprocessing(word_norm="lemma")
 
     text = "Alice and Bob are both, uncertain to go together. To SU university. héhéhe."

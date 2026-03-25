@@ -10,10 +10,11 @@ from nltk.corpus import stopwords
 import json, time, re, codecs, string
 from preprocessing_class import Preprocessing, load_pres, load_movies
 
+# file for pre_test, running word2vec and fastText
+
 DATASET = "pres"
 PRE_TRAINED_MODEL = "cc.fr.300" # for cc.fr.300.vec cc.fr.300.bin
 SAVING_OUTPUT_NAME = DATASET + "_w2v_fasttext_"
-
 
 # utilities
 
@@ -89,12 +90,10 @@ def run_cv(X, y, n_splits=5, scaling = True):
     if scaling :
         pipe = Pipeline([
             ("scaler", StandardScaler()),
-            ("clf",    LogisticRegression(solver="lbfgs", max_iter=2000))
-        ])
+            ("clf",    LogisticRegression(solver="lbfgs", max_iter=2000))])
     else:
         pipe = Pipeline([
-            ("clf",    LogisticRegression(solver="lbfgs", max_iter=2000))
-        ])
+            ("clf",    LogisticRegression(solver="lbfgs", max_iter=2000))])
     print("running cv")
     if DATASET == "pres":
             
@@ -103,16 +102,16 @@ def run_cv(X, y, n_splits=5, scaling = True):
                                         "average_precision",
                                         "precision_macro", "recall_macro"])
         return {
-            "F1":            scores["test_f1_macro"].mean(),
-            "F1_std":        scores["test_f1_macro"].std(),
-            "AUC":           scores["test_roc_auc"].mean(),
-            "AUC_std":       scores["test_roc_auc"].std(),
-            "AvgPrec":       scores["test_average_precision"].mean(),
-            "AvgPrec_std":   scores["test_average_precision"].std(),
-            "Precision":     scores["test_precision_macro"].mean(),
+            "F1": scores["test_f1_macro"].mean(),
+            "F1_std": scores["test_f1_macro"].std(),
+            "AUC": scores["test_roc_auc"].mean(),
+            "AUC_std": scores["test_roc_auc"].std(),
+            "AvgPrec": scores["test_average_precision"].mean(),
+            "AvgPrec_std": scores["test_average_precision"].std(),
+            "Precision": scores["test_precision_macro"].mean(),
             "Precision_std": scores["test_precision_macro"].std(),
-            "Recall":        scores["test_recall_macro"].mean(),
-            "Recall_std":    scores["test_recall_macro"].std(),
+            "Recall": scores["test_recall_macro"].mean(),
+            "Recall_std": scores["test_recall_macro"].std(),
         }
     else:
         scores = cross_validate(pipe, X, y, cv=n_splits,
@@ -120,21 +119,20 @@ def run_cv(X, y, n_splits=5, scaling = True):
                                         "average_precision",
                                         "precision_macro", "recall_macro", "accuracy"])
         return {
-            "F1":            scores["test_f1_macro"].mean(),
-            "F1_std":        scores["test_f1_macro"].std(),
-            "AUC":           scores["test_roc_auc"].mean(),
-            "AUC_std":       scores["test_roc_auc"].std(),
-            "AvgPrec":       scores["test_average_precision"].mean(),
-            "AvgPrec_std":   scores["test_average_precision"].std(),
-            "Precision":     scores["test_precision_macro"].mean(),
+            "F1": scores["test_f1_macro"].mean(),
+            "F1_std": scores["test_f1_macro"].std(),
+            "AUC": scores["test_roc_auc"].mean(),
+            "AUC_std": scores["test_roc_auc"].std(),
+            "AvgPrec": scores["test_average_precision"].mean(),
+            "AvgPrec_std": scores["test_average_precision"].std(),
+            "Precision": scores["test_precision_macro"].mean(),
             "Precision_std": scores["test_precision_macro"].std(),
-            "Recall":        scores["test_recall_macro"].mean(),
-            "Recall_std":    scores["test_recall_macro"].std(),
-            "Accuracy":      scores["test_accuracy"].mean(),
-            "Accuracy_std":  scores["test_accuracy"].std(),
+            "Recall": scores["test_recall_macro"].mean(),
+            "Recall_std": scores["test_recall_macro"].std(),
+            "Accuracy": scores["test_accuracy"].mean(),
+            "Accuracy_std": scores["test_accuracy"].std(),
         }
 
-# cleaner helper that works directly with KeyedVectors
 def mean_embed_kv(texts, kv):
     vecs = []
     for text in texts:

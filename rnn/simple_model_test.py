@@ -283,12 +283,20 @@ def run_experiment(X_train, X_test, y_train, y_test,
         
         # ===== Cross-validation on train set =====
         # Use only metrics that don't require predict_proba
-        cv_scoring = {
-            'f1_macro': 'f1_macro',
-            'precision_macro': 'precision_macro',
-            'recall_macro': 'recall_macro',
-        }
-        
+        if DATASET == "pres":
+            cv_scoring = {
+                'f1_macro': 'f1_macro',
+                'precision_macro': 'precision_macro',
+                'recall_macro': 'recall_macro',
+            }
+        else:
+            cv_scoring = {
+                'f1_macro': 'f1_macro',
+                'precision_macro': 'precision_macro',
+                'recall_macro': 'recall_macro',
+                "accuracy" : "accuracy",
+            }
+            
         cv_results = cross_validate(
             pipe, X_train_prep, y_train,
             cv=5,

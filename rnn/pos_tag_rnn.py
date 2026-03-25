@@ -3,7 +3,7 @@ from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.model_selection import StratifiedShuffleSplit, train_test_split
 from sklearn.metrics import (
     f1_score, average_precision_score,
-    roc_auc_score, precision_score, recall_score
+    roc_auc_score, precision_score, recall_score, accuracy_score
 )
 import numpy as np
 import string
@@ -16,6 +16,7 @@ from datetime import datetime
 from scipy.sparse import csr_matrix
 import spacy
 
+from preprocessing_class import Preprocessing, load_pres, load_movies
 
 # ─────────────────────────────────────────
 # CONFIGURATION

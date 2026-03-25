@@ -20,11 +20,11 @@ from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.metrics import (
     f1_score, average_precision_score, roc_auc_score, 
-    precision_score, recall_score
+    precision_score, recall_score, accuracy_score
 )
 from datetime import datetime
 
-from preprocessing_class import Preprocessing, load_pres
+from preprocessing_class import Preprocessing, load_movies, load_pres
 from nltk.corpus import stopwords
 
 final_stopwords_list = stopwords.words('french')
@@ -32,6 +32,10 @@ final_stopwords_list = stopwords.words('french')
 # ─────────────────────────────────────────
 # CONFIGURATION
 # ─────────────────────────────────────────
+VECTORIZER_TYPE = "count"  # 'count' or 'tfidf'
+RNN_TYPE = 'gru'  # 'lstm' or 'gru'
+DATASET = "pres" # "movie"
+SAVING_FILE_NAME =  DATASET + "_rnn_" + RNN_TYPE + " " + VECTORIZER_TYPE
 
 RANDOM_STATE = 42
 TEST_SIZE = 0.20
@@ -42,14 +46,12 @@ EPOCHS = 50
 LEARNING_RATE = 1e-5
 EARLY_STOPPING_PATIENCE = 10
 
-RNN_TYPE = 'gru'  # 'lstm' or 'gru'
 EMBED_DIM = 64
 HIDDEN_DIM = 128
 NUM_LAYERS = 5
 DROPOUT = 0.4
 
 # Vectorizer config
-VECTORIZER_TYPE = "count"  # 'count' or 'tfidf'
 MAX_FEATURES = 10000 # changed to 10000!
 NGRAM_RANGE = (1, 1)  # (1, 1) unigram, (1, 2) bigram
 
@@ -67,12 +69,20 @@ if device.type == 'cuda':
 # ─────────────────────────────────────────
 
 print("Loading data...")
-alltxt, alllabs = load_pres("Dataset/corpus.tache1.learn.utf8")
-alltxt = np.array(alltxt)
-# Convert labels: 1 -> 0 (positive), -1 -> 1 (negative)
-alllabs = np.where(np.array(alllabs) == 1, 0, 1)
-print(f"  Total samples: {len(alltxt)}")
-print(f"  Label distribution: {np.bincount(alllabs)}")
+if DATASET == "pres":
+    alltxt, alllabs = load_pres("Dataset/corpus.tache1.learn.utf8")
+    alltxt = np.array(alltxt)
+    # Convert labels: 1 -> 0, -1 -> 1
+    alllabs = np.where(np.array(alllabs) == 1, 0, 1)
+    print(f"  Total samples: {len(alltxt)}")
+    print(f"  Label distribution: {np.bincount(alllabs)}")
+else:
+    path = "./Dataset/movies1000/"
+    alltxt,alllabs = load_movies(path)
+    alltxt, alllabs = np.array(alltxt), np.array(alllabs)
+    print(f"  Total samples: {len(alltxt)}")
+    print(f"  Label distribution: {np.bincount(alllabs)}")
+
 
 # Train/val/test split
 X_train, X_test, y_train, y_test = train_test_split(
@@ -101,6 +111,8 @@ punc = set(string.punctuation + '\n\r\t')
 punc.discard("'")
 custom_punctuation = "".join(punc)
 
+lang = "french" if DATASET == "pres" else "english"
+
 prep = Preprocessing(
     low_case=True,
     rm_punctuation=True,
@@ -110,7 +122,7 @@ prep = Preprocessing(
     all_capital=True,
     cap_name=True,
     rm_accent=False,
-    lang="french",
+    lang=lang,
     punct=custom_punctuation,
     urls=False
 )
@@ -297,12 +309,21 @@ def compute_metrics(all_labels, all_preds, all_probs):
     all_preds = np.array(all_preds)
     all_probs = np.array(all_probs)
     
+    if DATASET == "pres":
+        return {
+            "f1": float(f1_score(all_labels, all_preds, average="macro", zero_division=0)),
+            "precision": float(precision_score(all_labels, all_preds, average="macro", zero_division=0)),
+            "recall": float(recall_score(all_labels, all_preds, average="macro", zero_division=0)),
+            "roc_auc": float(roc_auc_score(all_labels, all_probs)),
+            "avg_precision": float(average_precision_score(all_labels, all_probs)),
+        }
+    
     return {
         "f1": float(f1_score(all_labels, all_preds, average="binary", zero_division=0)),
         "precision": float(precision_score(all_labels, all_preds, zero_division=0)),
         "recall": float(recall_score(all_labels, all_preds, zero_division=0)),
         "roc_auc": float(roc_auc_score(all_labels, all_probs)),
-        "avg_precision": float(average_precision_score(all_labels, all_probs)),
+        "accuracy": float(accuracy_score(all_labels, all_preds)),
     }
 
 # ─────────────────────────────────────────
@@ -392,7 +413,7 @@ for epoch in range(EPOCHS):
 
     # Early stopping check
     if patience_counter >= EARLY_STOPPING_PATIENCE:
-        print(f"\n⚠ Early stopping at epoch {epoch+1}: No improvement for {EARLY_STOPPING_PATIENCE} epochs")
+        print(f"\nEarly stopping at epoch {epoch+1}: No improvement for {EARLY_STOPPING_PATIENCE} epochs")
         break
 
 print(f"\nBest val F1: {best_f1:.3f}")
@@ -406,7 +427,7 @@ print("TEST EVALUATION")
 print("="*80)
 
 model.load_state_dict(best_model_state)
-torch.save(model.state_dict(), "model_rnn_count_vectorizer_2_corr_gru.pth")
+torch.save(model.state_dict(), f"{SAVING_FILE_NAME}.pth")
 
 test_m = run_epoch(model, dataloader_test, optimizer, criterion, training=False)
 
@@ -444,8 +465,12 @@ results = {
     "test": test_m,
 }
 
-with open("results_rnn_count_vectorizer_2_corr_gru.json", "w") as f:
+with open(f"results_{SAVING_FILE_NAME}.json", "w") as f:
     json.dump(results, f, indent=2)
 
-print("\n✓ Results saved to results_rnn_count_vectorizer_2_corr_gru.json")
-print("✓ Model saved to model_rnn_count_vectorizer_2_corr_gru.pth")
+print(f"\nResults saved to results_{SAVING_FILE_NAME}.json")
+print(f"Model saved to {SAVING_FILE_NAME}.pth")
+
+print("DATASET ", DATASET)
+print(f"Transformer embedding dimension: {EMBED_DIM}")
+print(f"\nLoaded model ({RNN_TYPE})...")

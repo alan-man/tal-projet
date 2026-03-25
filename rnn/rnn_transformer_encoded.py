@@ -142,7 +142,8 @@ prep = Preprocessing(
         lang=lang,
         punct=custom_punctuation,
         urls=False
-    )
+)
+
 print("Preprocessing language ", lang)
 
 print("Preprocessing texts...")
@@ -328,6 +329,7 @@ def compute_metrics(all_labels, all_preds, all_probs):
     all_labels = np.array(all_labels)
     all_preds = np.array(all_preds)
     all_probs = np.array(all_probs)
+    
     if DATASET == "pres":
         return {
             "f1": float(f1_score(all_labels, all_preds, average="binary", zero_division=0)),

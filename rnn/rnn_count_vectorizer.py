@@ -1,8 +1,4 @@
-"""
-RNN sentiment classification using CountVectorizer
-Tests a single configuration with clean evaluation structure
-"""
-
+# RNN classification using cuont/tfidf
 # 2 is corrected function
 
 import os
@@ -18,10 +14,8 @@ from torch.utils.data import Dataset, DataLoader
 from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
-from sklearn.metrics import (
-    f1_score, average_precision_score, roc_auc_score, 
-    precision_score, recall_score, accuracy_score
-)
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import f1_score, precision_score, recall_score, roc_auc_score, average_precision_score, accuracy_score
 from datetime import datetime
 
 from preprocessing_class import Preprocessing, load_movies, load_pres

@@ -19,3 +19,12 @@ pred_test_tokens_dist_3.pt
 *.pkl
 tokens/
 deberta_dist_cache/
+*.pth
+*.json
+Test_set/
+hyperparam_rnn/
+Dataset/
+model_emb/
+plots/
+res_files_saved/
+Test_submission/

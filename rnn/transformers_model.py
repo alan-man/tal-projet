@@ -29,6 +29,8 @@ LEARNING_RATE = 2e-5
 EARLY_STOPPING_PATIENCE = 5
 
 
+FREEZE_TRANSFORMER = False # to freeze weights and only train classifier. 
+
 # model selection
 MODEL_NAME = "almanach/camemberta-base" # "camembert-base" # "almanach/camemberta-base" 'camembert-base' 
 SAVING_FILE_NAME =  DATASET + "_transformer_"
@@ -131,6 +133,14 @@ test_dataloader = DataLoader(dataset_test, batch_size=BATCH_SIZE, shuffle=False)
 
 print(f"\nModel used ({MODEL_NAME})")
 model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME, num_labels=2)
+
+if FREEZE_TRANSFORMER:
+    base_model = getattr(model, model.config.model_type) 
+    for param in base_model.parameters():
+        param.requires_grad = False
+        
+    print(f"Base {model.config.model_type} frozen. Classifier head is still trainable.")
+
 model = model.to(device)
 
 class_weights_tensor = torch.tensor(class_weights, dtype=torch.float32).to(device)
@@ -271,6 +281,7 @@ results = {
         "learning_rate": LEARNING_RATE,
         "max_length": MAX_LENGTH,
         "early_stopping_patience": EARLY_STOPPING_PATIENCE,
+        "frozen": FREEZE_TRANSFORMER,
     },
     "best_val_f1": best_f1,
     "epochs_trained": len(history),

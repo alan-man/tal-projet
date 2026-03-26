@@ -12,7 +12,7 @@
   "model_config": {
     "rnn_type": "gru",
     "embed_dim": 32,
-    "hidden_dim": 54,
+    "hidden_dim": 64,
     "num_layers": 2,
     "dropout": 0.4,
     "learning_rate": 1e-05,

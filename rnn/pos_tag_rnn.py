@@ -14,7 +14,7 @@ import json
 from datetime import datetime
 from scipy.sparse import csr_matrix
 import spacy
-
+from nltk.corpus import stopwords
 from preprocessing_class import Preprocessing, load_pres, load_movies
 
 DATASET = "movies"
@@ -86,18 +86,20 @@ if INPUT_TYPE == 'pos_tags':
     
 elif INPUT_TYPE in ['tfidf', 'count']:
     # Use TF-IDF or Count vectorizer
-    stpw = "french" if DATASET == "pres" else "english"
+    final_stopwords_list = stopwords.words('french') if DATASET == "pres" else stopwords.words('english')
+
+
     print("vect", INPUT_TYPE)    
     vectorizer = TfidfVectorizer(
         max_features=5000,
         max_df=0.95,
         min_df=2,
-        stop_words=stpw
+        stop_words=final_stopwords_list
     ) if INPUT_TYPE == 'tfidf' else CountVectorizer(
         max_features=5000,
         max_df=0.95,
         min_df=2,
-        stop_words=stpw
+        stop_words=final_stopwords_list
     )
     X_train_vec = vectorizer.fit_transform(X_train_sub)
     X_val_vec   = vectorizer.transform(X_val)

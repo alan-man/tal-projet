@@ -21,13 +21,14 @@ from datetime import datetime
 from preprocessing_class import Preprocessing, load_movies, load_pres
 from nltk.corpus import stopwords
 
-final_stopwords_list = stopwords.words('french')
 
 
-VECTORIZER_TYPE = "count"  # 'count' or 'tfidf'
+VECTORIZER_TYPE = "tfidf"  # 'count' or 'tfidf'
 RNN_TYPE = 'gru'  # 'lstm' or 'gru'
 DATASET = "pres" # "movie"
 SAVING_FILE_NAME =  DATASET + "_rnn_" + RNN_TYPE + " " + VECTORIZER_TYPE
+
+final_stopwords_list = stopwords.words('french') if DATASET == "pres" else stopwords.words('english')
 
 RANDOM_STATE = 42
 TEST_SIZE = 0.20
@@ -38,9 +39,9 @@ EPOCHS = 50
 LEARNING_RATE = 1e-5
 EARLY_STOPPING_PATIENCE = 10
 
-EMBED_DIM = 64
-HIDDEN_DIM = 128
-NUM_LAYERS = 5
+EMBED_DIM = 32 # 64
+HIDDEN_DIM = 54 # 128
+NUM_LAYERS = 2 #5
 DROPOUT = 0.4
 
 # Vectorizer config
@@ -258,13 +259,14 @@ def compute_metrics(all_labels, all_preds, all_probs):
             "roc_auc": float(roc_auc_score(all_labels, all_probs)),
             "avg_precision": float(average_precision_score(all_labels, all_probs)),
         }
-    
+    print('computing metrics 2')
     return {
         "f1": float(f1_score(all_labels, all_preds, average="binary", zero_division=0)),
         "precision": float(precision_score(all_labels, all_preds, zero_division=0)),
         "recall": float(recall_score(all_labels, all_preds, zero_division=0)),
         "roc_auc": float(roc_auc_score(all_labels, all_probs)),
         "accuracy": float(accuracy_score(all_labels, all_preds)),
+        "avg_precision": float(average_precision_score(all_labels, all_probs)),
     }
 
 
@@ -315,6 +317,9 @@ for epoch in range(EPOCHS):
 
     train_m = run_epoch(model, dataloader_train, optimizer, criterion, training=True)
     val_m = run_epoch(model, dataloader_val, optimizer, criterion, training=False)
+
+    if epoch == 0:
+        best_model_state = {k: v.clone() for k, v in model.state_dict().items()}
 
     # Early stopping
     if val_m["f1"] > best_f1:

@@ -24,16 +24,18 @@ VAL_SIZE = 0.20
 MAX_LENGTH = 128            
 BATCH_SIZE = 8            
 GRADIENT_ACCUMULATION_STEPS = 2   # to accumulate batches
-EPOCHS = 10
+EPOCHS = 20
 LEARNING_RATE = 2e-5
 EARLY_STOPPING_PATIENCE = 5
 
-
 FREEZE_TRANSFORMER = False # to freeze weights and only train classifier. 
 
+# models : english: "bert-base-cased" "FacebookAI/roberta-base"
+# french: "almanach/camemberta-base" "camembert-base"
+
 # model selection
-MODEL_NAME = "almanach/camemberta-base" # "camembert-base" # "almanach/camemberta-base" 'camembert-base' 
-SAVING_FILE_NAME =  DATASET + "_transformer_"
+MODEL_NAME = "almanach/camemberta-base"
+SAVING_FILE_NAME = f"{DATASET}_transformer_{MAX_LENGTH}_{LEARNING_RATE}_{str(MODEL_NAME).replace('/', '_')}"
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
@@ -46,7 +48,6 @@ alltxt, alllabs = None, None
 print("Loading DATASET", DATASET)
 
 if DATASET == "pres": 
-
     alltxt, alllabs = load_pres("Dataset/corpus.tache1.learn.utf8")
     alltxt, alllabs = np.array(alltxt), np.array(alllabs)
     # Convert labels: 1 -> 0, -1 -> 1
@@ -289,7 +290,7 @@ results = {
     "test": test_m,
 }
 
-with open("{SAVING_FILE_NAME}_results.json", "w") as f:
+with open(f"{SAVING_FILE_NAME}_results.json", "w") as f:
     json.dump(results, f, indent=2)
 
 print(f"\nSaved to {SAVING_FILE_NAME}_results.json")

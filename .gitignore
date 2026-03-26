@@ -28,3 +28,5 @@ model_emb/
 plots/
 res_files_saved/
 Test_submission/
+*.bin
+*.gz

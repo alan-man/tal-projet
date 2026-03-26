@@ -17,18 +17,28 @@ import spacy
 
 from preprocessing_class import Preprocessing, load_pres, load_movies
 
+DATASET = "pres"
 INPUT_TYPE = 'pos_tags'  # 'pos_tags', 'tfidf', 'count'
-
 RNN_TYPE = 'gru'  # 'lstm' or 'gru'
 DROPOUT = 0.4      
 EARLY_STOPPING_PATIENCE = 10  # stop if val F1 doesn't improve for N epochs
+SAVING_FILE_NAME =  DATASET + "_pos_tag"
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
 
-alltxt, alllabs = load_pres("Dataset/corpus.tache1.learn.utf8")
-alltxt, alllabs = np.array(alltxt), np.array(alllabs)
-alllabs = np.where(alllabs == 1, 0, 1)
+if DATASET == "pres":
+
+    alltxt, alllabs = load_pres("Dataset/corpus.tache1.learn.utf8")
+    alltxt, alllabs = np.array(alltxt), np.array(alllabs)
+    alllabs = np.where(alllabs == 1, 0, 1)
+    print(f"Size train: {len(alltxt)}")
+
+else:
+    alltxt,alllabs = load_movies("./Dataset/movies1000/")
+    alltxt, alllabs = np.array(alltxt), np.array(alllabs)
+    print(f"Size train: {len(alltxt)}")
+
 
 X_train, X_test, y_train, y_test = train_test_split(
     alltxt, alllabs,
@@ -45,8 +55,11 @@ X_train_sub, X_val, y_train_sub, y_val = train_test_split(
 )
 
 if INPUT_TYPE == 'pos_tags':
-    nlp = spacy.load("fr_core_news_sm")
-        
+    if DATASET == "pres":
+        nlp = spacy.load("fr_core_news_sm")        
+    else:
+        nlp = spacy.load("en_core_web_sm")  
+
     def pos_with_tense(text):
         """
         Returns a list of POS tags for each token.
@@ -73,17 +86,18 @@ if INPUT_TYPE == 'pos_tags':
     
 elif INPUT_TYPE in ['tfidf', 'count']:
     # Use TF-IDF or Count vectorizer
+    stpw = "french" if DATASET == "pres" else "english"
     print("vect", INPUT_TYPE)    
     vectorizer = TfidfVectorizer(
         max_features=5000,
         max_df=0.95,
         min_df=2,
-        stop_words='french'
+        stop_words=stpw
     ) if INPUT_TYPE == 'tfidf' else CountVectorizer(
         max_features=5000,
         max_df=0.95,
         min_df=2,
-        stop_words='french'
+        stop_words=stpw
     )
     X_train_vec = vectorizer.fit_transform(X_train_sub)
     X_val_vec   = vectorizer.transform(X_val)
@@ -221,13 +235,22 @@ def compute_metrics(all_labels, all_preds, all_probs):
     all_labels = np.array(all_labels)
     all_preds  = np.array(all_preds)
     all_probs  = np.array(all_probs)
+    if DATASET == "pres":
+        return {
+            "f1": float(f1_score(all_labels, all_preds, average="binary")),
+            "avg_precision": float(average_precision_score(all_labels, all_probs)),
+            "roc_auc": float(roc_auc_score(all_labels, all_probs)),
+            "precision": float(precision_score(all_labels, all_preds, zero_division=0)),
+            "recall": float(recall_score(all_labels, all_preds)),
+        }
     return {
-        "f1": float(f1_score(all_labels, all_preds, average="binary")),
-        "avg_precision": float(average_precision_score(all_labels, all_probs)),
-        "roc_auc": float(roc_auc_score(all_labels, all_probs)),
-        "precision": float(precision_score(all_labels, all_preds, zero_division=0)),
-        "recall": float(recall_score(all_labels, all_preds)),
-    }
+            "f1": float(f1_score(all_labels, all_preds, average="binary")),
+            "avg_precision": float(average_precision_score(all_labels, all_probs)),
+            "roc_auc": float(roc_auc_score(all_labels, all_probs)),
+            "precision": float(precision_score(all_labels, all_preds, zero_division=0)),
+            "recall": float(recall_score(all_labels, all_preds)),
+            "accuracy": float(accuracy_score(all_labels, all_preds)),
+        }
 
 def run_epoch(model, loader, optimizer, criterion, training=True):
     model.train() if training else model.eval()
@@ -264,7 +287,6 @@ def run_epoch(model, loader, optimizer, criterion, training=True):
     metrics = compute_metrics(all_labels, all_preds, all_probs)
     metrics["loss"] = float(total_loss / len(loader))
     return metrics
-
 
 history = []         
 best_f1 = 0.0
@@ -310,7 +332,7 @@ for epoch in range(50):
 print(f"\nBest val F1: {best_f1:.3f} (at epoch {len(history) - patience_counter})")
 
 model.load_state_dict(best_model_state)
-torch.save(model.state_dict(), "model_rnn_pos_tag_tense_gru.pth")
+torch.save(model.state_dict(), SAVING_FILE_NAME + "_model.pth")
 
 test_m = run_epoch(model, dataloader_test, optimizer, criterion, training=False)
 
@@ -323,6 +345,8 @@ print(
     f"prec {test_m['precision']:.3f} | "
     f"rec {test_m['recall']:.3f}"
 )
+if DATASET != "pres":
+    print(f"accuracy {test_m['accuracy']:.3f} ")
 
 results = {
     "run_date":  datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -343,7 +367,7 @@ results = {
     "test":      test_m,           
 }
 
-with open("results_rnn_pos_tense_gru.json", "w") as f:
+with open(SAVING_FILE_NAME + ".json", "w") as f:
     json.dump(results, f, indent=2)
 
-print("\nResults saved to results_rnn_pos_tense_gru.json")
+print("\nResults saved to " + SAVING_FILE_NAME + ".json")

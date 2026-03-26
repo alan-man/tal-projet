@@ -30,3 +30,4 @@ res_files_saved/
 Test_submission/
 *.bin
 *.gz
+model_emb_e5/

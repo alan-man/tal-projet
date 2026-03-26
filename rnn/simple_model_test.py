@@ -20,14 +20,18 @@ from nltk.corpus import stopwords
 from preprocessing_class import Preprocessing, load_movies, load_pres
 
 # config
-DATASET = "pres"
+DATASET = "movies"
 RANDOM_STATE = 42
 TEST_SIZE = 0.20
 MAX_FEATURE = 5000
 SAVING_FILE_NAME =  DATASET + "_simple_model_"
 
+
 STOPWORDS_FR = stopwords.words('french')
 STOPWORDS_EN = stopwords.words('english')
+
+STOPWORDS = STOPWORDS_FR if DATASET == "pres" else STOPWORDS_EN
+
 PUNC = set(string.punctuation + '\n\r\t')
 PUNC.discard("'")  # keep apostrophes for French words
 CUSTOM_PUNCTUATION = "".join(PUNC)
@@ -71,7 +75,7 @@ def get_vectorizer_configs():
     """Returns a dict of vectorizer configurations to test."""
     configs = {
         "count_unigram": CountVectorizer(
-            stop_words=STOPWORDS_FR,
+            stop_words=STOPWORDS,
             max_features=MAX_FEATURE,
             max_df=0.95,
             min_df=2,
@@ -79,7 +83,7 @@ def get_vectorizer_configs():
             lowercase=False
         ),
         "count_bigram": CountVectorizer(
-            stop_words=STOPWORDS_FR,
+            stop_words=STOPWORDS,
             max_features=MAX_FEATURE,
             max_df=0.95,
             min_df=2,
@@ -87,7 +91,7 @@ def get_vectorizer_configs():
             lowercase=False
         ),
         "tfidf_unigram": TfidfVectorizer(
-            stop_words=STOPWORDS_FR,
+            stop_words=STOPWORDS,
             max_features=MAX_FEATURE,
             max_df=0.95,
             min_df=2,
@@ -98,7 +102,7 @@ def get_vectorizer_configs():
             lowercase=False
         ),
         "tfidf_bigram": TfidfVectorizer(
-            stop_words=STOPWORDS_FR,
+            stop_words=STOPWORDS,
             max_features=MAX_FEATURE,
             max_df=0.95,
             min_df=2,
@@ -154,10 +158,10 @@ def compute_metrics(y_true, y_pred, y_proba=None):
         }
     else:
         metrics = {
-            "f1_macro": f1_score(y_true, y_pred, average='macro', zero_division=0),
+            "f1": f1_score(y_true, y_pred, zero_division=0),
             "f1_weighted": f1_score(y_true, y_pred, average='weighted', zero_division=0),
-            "precision_macro": precision_score(y_true, y_pred, average='macro', zero_division=0),
-            "recall_macro": recall_score(y_true, y_pred, average='macro', zero_division=0),
+            "precision": precision_score(y_true, y_pred, zero_division=0),
+            "recall": recall_score(y_true, y_pred, zero_division=0),
             "accuracy": float(accuracy_score(y_true, y_pred)),
         }
 

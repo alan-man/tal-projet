@@ -16,7 +16,7 @@ from preprocessing_class import Preprocessing, load_pres, load_movies
 os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
 
 # Config for run
-DATASET = "pres"
+DATASET = "movies"
 
 RANDOM_STATE = 42
 TEST_SIZE = 0.20

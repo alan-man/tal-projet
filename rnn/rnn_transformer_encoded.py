@@ -24,9 +24,8 @@ from preprocessing_class import Preprocessing, load_pres, load_movies
 # CONFIGURATION !!!!
 
 # choose dataset
-DATASET = "pres" # "movie"
-MAX_LENGHT_TOKEN = 1024
-SAVING_FILE_NAME =  DATASET + "_rnn_encoder"
+DATASET = "movies" # "movie"
+MAX_LENGHT_TOKEN = 512
 
 # -----------------------------
 RANDOM_STATE = 42
@@ -40,8 +39,10 @@ EARLY_STOPPING_PATIENCE = 10
 
 RNN_TYPE = 'gru'  # 'lstm' or 'gru'
 HIDDEN_DIM = 32
-NUM_LAYERS = 10
+NUM_LAYERS = 2
 DROPOUT = 0.4
+
+SAVING_FILE_NAME =  DATASET + "_rnn_encoder_" + RNN_TYPE
 
 # Transformer encoder config
 TRANSFORMER_MODEL = "intfloat/multilingual-e5-base"  # 768 embeddings

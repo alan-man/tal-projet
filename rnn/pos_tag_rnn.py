@@ -17,12 +17,12 @@ import spacy
 
 from preprocessing_class import Preprocessing, load_pres, load_movies
 
-DATASET = "pres"
+DATASET = "movies"
 INPUT_TYPE = 'pos_tags'  # 'pos_tags', 'tfidf', 'count'
 RNN_TYPE = 'gru'  # 'lstm' or 'gru'
 DROPOUT = 0.4      
 EARLY_STOPPING_PATIENCE = 10  # stop if val F1 doesn't improve for N epochs
-SAVING_FILE_NAME =  DATASET + "_pos_tag"
+SAVING_FILE_NAME =  DATASET + "_pos_tag_" + RNN_TYPE
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")

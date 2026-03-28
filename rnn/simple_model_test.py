@@ -24,7 +24,7 @@ DATASET = "pres"
 RANDOM_STATE = 42
 TEST_SIZE = 0.20
 MAX_FEATURE = 5000
-SAVING_FILE_NAME =  DATASET + "_simple_model_"
+SAVING_FILE_NAME =  DATASET + "_simple_model_2"
 
 
 STOPWORDS_FR = stopwords.words('french')
@@ -163,7 +163,7 @@ def compute_metrics(y_true, y_pred, y_proba=None):
             metrics["roc_auc"] = roc_auc_score(y_true, y_proba)
             metrics["avg_precision"] = average_precision_score(y_true, y_proba)
         except Exception as e:
-            print(f"    Warning: Could not compute AUC/AP: {e}")
+            print(f"Warning: Could not compute AUC/AP: {e}")
             metrics["roc_auc"] = None
             metrics["avg_precision"] = None
     

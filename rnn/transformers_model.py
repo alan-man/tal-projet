@@ -31,7 +31,8 @@ EARLY_STOPPING_PATIENCE = 5
 FREEZE_TRANSFORMER = False # to freeze weights and only train classifier. 
 
 # models : english: "bert-base-cased" "FacebookAI/roberta-base"
-# french: "almanach/camemberta-base" "camembert-base"
+# french: "almanach/camemberta-base" 
+
 
 # model selection
 MODEL_NAME = "almanach/camemberta-base"

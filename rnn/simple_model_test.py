@@ -20,7 +20,7 @@ from nltk.corpus import stopwords
 from preprocessing_class import Preprocessing, load_movies, load_pres
 
 # config
-DATASET = "movies"
+DATASET = "pres"
 RANDOM_STATE = 42
 TEST_SIZE = 0.20
 MAX_FEATURE = 5000
@@ -42,19 +42,7 @@ def get_preprocessing_configs():
     lang = "french" if DATASET == "pres" else "english"
     
     configs = {
-        "basic_lower": Preprocessing(
-            low_case=True,
-            rm_punctuation=True,
-            rm_number=False,
-            word_norm=None,
-            pos_tagging=False,
-            all_capital=True,
-            cap_name=True,
-            rm_accent=False,
-            lang=lang,
-            punct=CUSTOM_PUNCTUATION,
-            urls=False
-        ),
+        "raw_text": None,
         "no_lower": Preprocessing(
             low_case=False,
             rm_punctuation=True,
@@ -72,6 +60,7 @@ def get_preprocessing_configs():
     return configs
 
 def get_vectorizer_configs():
+
     """Returns a dict of vectorizer configurations to test."""
     configs = {
         "count_unigram": CountVectorizer(
@@ -80,7 +69,8 @@ def get_vectorizer_configs():
             max_df=0.95,
             min_df=2,
             ngram_range=(1, 1),
-            lowercase=False
+            lowercase=False,
+            preprocessor= lambda x: x
         ),
         "count_bigram": CountVectorizer(
             stop_words=STOPWORDS,
@@ -88,7 +78,8 @@ def get_vectorizer_configs():
             max_df=0.95,
             min_df=2,
             ngram_range=(1, 2),
-            lowercase=False
+            lowercase=False,
+            preprocessor= lambda x: x
         ),
         "tfidf_unigram": TfidfVectorizer(
             stop_words=STOPWORDS,
@@ -99,7 +90,8 @@ def get_vectorizer_configs():
             use_idf=True,
             smooth_idf=True,
             sublinear_tf=False,
-            lowercase=False
+            lowercase=False,
+            preprocessor= lambda x: x
         ),
         "tfidf_bigram": TfidfVectorizer(
             stop_words=STOPWORDS,
@@ -110,7 +102,8 @@ def get_vectorizer_configs():
             use_idf=True,
             smooth_idf=True,
             sublinear_tf=False,
-            lowercase=False
+            lowercase=False,
+            preprocessor= lambda x: x
         ),
     }
     return configs
@@ -211,14 +204,18 @@ def run_experiment(X_train, X_test, y_train, y_test,
                    preprocessor, vectorizer, model):
     
     print(prep_name, vectorizer_name, model_name)
-    try:
+    try:            
         pipe = Pipeline([
             ('vectorizer', vectorizer),
             ('scaler', StandardScaler(with_mean=False)),
             ('model', model)])
         
-        X_train_prep = [preprocessor.process(str(t)) for t in X_train]
-        X_test_prep = [preprocessor.process(str(t)) for t in X_test]
+        if prep_name == "raw_text":
+            X_train_prep = X_train
+            X_test_prep = X_test
+        else:
+            X_train_prep = [preprocessor.process(str(t)) for t in X_train]
+            X_test_prep = [preprocessor.process(str(t)) for t in X_test]
         
         if DATASET == "pres":
             cv_scoring = {

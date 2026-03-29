@@ -1,5 +1,6 @@
 .venv/
 Dataset/
+npy/
 images/
 __pycache__/
 *.dat
@@ -31,3 +32,5 @@ Test_submission/
 *.bin
 *.gz
 model_emb_e5/
+*.csv
+tmp_trash_files/

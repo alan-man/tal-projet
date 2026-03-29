@@ -88,7 +88,7 @@ custom_punctuation = "".join(punc)
 lang = "french" if DATASET == "pres" else "english"
 
 prep = Preprocessing(
-    low_case=True,
+    low_case=True, # change to False 
     rm_punctuation=True,
     rm_number=False,
     word_norm=None,

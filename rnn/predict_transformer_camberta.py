@@ -18,22 +18,19 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 RANDOM_STATE = 42
 TEST_SIZE = 0.20
 VAL_SIZE = 0.20
-MAX_LENGTH = 128
+MAX_LENGTH = 512 
 BATCH_SIZE = 8
-MODEL_NAME = "almanach/camemberta-base"
-MODEL_PATH = "model_transformer_camberta.pth"
-OUTPUT_FILE = "predictions_camberta.csv"
+MODEL_NAME = "camembert-base" #"almanach/camemberta-base"
+MODEL_PATH = "{SAVING_FILE_NAME}.pth" #"model_transformer_camberta.pth"
+OUTPUT_FILE = "predictions_cambert_all_train.csv"
 
-# ─────────────────────────────────────────
-# DEVICE
-# ─────────────────────────────────────────
+# prediction movies with roberta
+# MODEL_NAME = "FacebookAI/roberta-base"
+# MODEL_PATH = "movies_transformer_512_2e-05_FacebookAI_roberta-base.pth"
+# OUTPUT_FILE = "predictions_" + f"movies_{str(MODEL_NAME).replace('/', '_')}"
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
-
-# ─────────────────────────────────────────
-# DATA LOADING (same as training)
-# ─────────────────────────────────────────
 
 def load_pres_test(fname):
     """
@@ -51,26 +48,25 @@ def load_pres_test(fname):
 
     return alltxts
 
-print("Loading data...")
-alltxt = load_pres_test("Test_set/corpus.tache1.test.utf8")
+print("Loading data")
+alltxt = load_pres_test("Dataset/corpus.tache1.learn.utf8") # "Test_set/corpus.tache1.test.utf8"
 alltxt = np.array(alltxt)
-print(f"  Total samples: {len(alltxt)}")
+print(f"Total samples: {len(alltxt)}")
 
 # ─────────────────────────────────────────
 # TOKENIZATION
 # ─────────────────────────────────────────
 
-print(f"Loading tokenizer ({MODEL_NAME})...")
+print(f"Loading tokenizer ({MODEL_NAME})")
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 
 def tokenize_dataset(texts, tokenizer, max_length=MAX_LENGTH):
-    """Tokenize a list of texts."""
     input_ids_list = []
     attention_masks_list = []
     
     for i, text in enumerate(texts):
         if (i + 1) % 2500 == 0:
-            print(f"  Tokenized {i + 1}/{len(texts)}")
+            print(f"Tokenized {i + 1}/{len(texts)}")
         
         encoded = tokenizer(
             text,
@@ -143,7 +139,6 @@ all_probs = np.array(all_probs)
 print(f"\nSaving predictions to {OUTPUT_FILE}...")
 with open(OUTPUT_FILE, 'w', newline='') as f:
     writer = csv.writer(f)
-    writer.writerow(['prob'])
     for prob in all_probs:
         writer.writerow([prob])
 

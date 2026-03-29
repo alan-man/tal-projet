@@ -31,7 +31,7 @@ EARLY_STOPPING_PATIENCE = 5
 FREEZE_TRANSFORMER = False # to freeze weights and only train classifier. 
 
 # models : english: "bert-base-cased" "FacebookAI/roberta-base"
-# french: "almanach/camemberta-base" 
+# french: "almanach/camemberta-base" "camembert-base"
 
 
 # model selection
@@ -147,7 +147,7 @@ model = model.to(device)
 
 class_weights_tensor = torch.tensor(class_weights, dtype=torch.float32).to(device)
 loss_fn = nn.CrossEntropyLoss(weight=class_weights_tensor)
-optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE) # weight_decay=0.01
+optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=0.1) # weight_decay=0.01
 
 def compute_metrics(all_labels, all_preds, all_probs):
     """Compute evaluation metrics."""
@@ -266,7 +266,7 @@ print(f"\nBest validation F1 obtained: {best_f1:.4f}")
 
 # doing for test
 model.load_state_dict(best_model_state)
-torch.save(model.state_dict(), "{SAVING_FILE_NAME}.pth")
+torch.save(model.state_dict(), f"{SAVING_FILE_NAME}.pth")
 
 test_m = run_epoch(model, test_dataloader, optimizer, loss_fn, training=False)
 

@@ -16,7 +16,6 @@ from torch.utils.data import Dataset, DataLoader
 from sklearn.metrics import f1_score, roc_auc_score, average_precision_score, precision_score, recall_score
 from sklearn.model_selection import train_test_split
 
-
 HIDDEN_DIM = 64
 NUM_LAYERS = 2
 DROPOUT = 0.3
@@ -26,10 +25,10 @@ BATCH_SIZE = 32    # number of chunks per batch
 EARLY_STOPPING_PATIENCE = 10
 CHUNK_SIZE = 30   # split the sequence into chunks of this size for training
 
-PROBS_FILE  = "probs_ytest.npy"
-LABELS_FILE = "ytest.npy"
+PROBS_FILE  = "probs_all_train_smoothed.npy"
+LABELS_FILE = "alllabs.npy"
 
-SAVING_FILE_NAME = "bilstm_prob_corrector"
+SAVING_FILE_NAME = "bilstm_prob_corrector_all_train_smoothed"
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
